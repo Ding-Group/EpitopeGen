@@ -16,7 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from collections import Counter
 from matplotlib.patches import Rectangle, Circle
 
-from cancer_wu.utils import *
+from research.cancer_wu.utils import *
 
 
 def analysis_wrapper(data_dir, pred_csv, epi_db_path, obs_cache=None, outdir=None, filter_cdr3_notna=True, filter_cell_types=True, top_k=8):

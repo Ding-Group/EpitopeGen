@@ -10,7 +10,7 @@ from concurrent.futures import ProcessPoolExecutor
 import mhcgnomes
 
 # local codes
-from epigen.utils import is_valid_cdr, is_valid_peptide
+from research.epigen.utils import is_valid_cdr, is_valid_peptide
 
 
 def preprocess_netmhcpan(root, outdir="data", th=0.426, use_mhc=False):

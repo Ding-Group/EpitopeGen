@@ -2,16 +2,16 @@
 
 ### --------------------------------------------------------------
 ### Train GPT-2-small architecture
-### You need a trained tokenizer and config under regaler/EpiGen
+### You need a trained tokenizer and config under research/regaler/EpiGen
 ### --------------------------------------------------------------
-accelerate launch epigen/run_clm_no_trainer.py \
+accelerate launch research/epigen/run_clm_no_trainer.py \
     --model_name_or_path gpt2-small \
     --train_file data/train.csv \
     --validation_file data/val.csv \
     --per_device_train_batch_size 512 \
     --per_device_eval_batch_size 512 \
     --num_train_epochs 100 \
-    --tokenizer_name regaler/EpiGen \
+    --tokenizer_name research/regaler/EpiGen \
     --checkpointing_steps epoch \
     --with_tracking \
     --report_to wandb \
@@ -28,14 +28,14 @@ accelerate launch epigen/run_clm_no_trainer.py \
 ### After, use utils.draw_learning_curve() function to select the best ckpt
 ### --------------------------------------------------------------
 # for i in $(seq 0 1 100); do
-#   CUDA_VISIBLE_DEVICES=0 python epigen/run_clm_predict.py \
+#   CUDA_VISIBLE_DEVICES=0 python research/epigen/run_clm_predict.py \
 #       --model_name_or_path gpt2-small \
 #       --train_file data/train.csv \
 #       --validation_file data/val.csv \
 #       --per_device_train_batch_size 512 \
 #       --per_device_eval_batch_size 512 \
 #       --num_train_epochs 101 \
-#       --tokenizer_name regaler/EpiGen \
+#       --tokenizer_name research/regaler/EpiGen \
 #       --checkpointing_steps epoch \
 #       --with_tracking \
 #       --report_to wandb \
@@ -59,14 +59,14 @@ datasets=("donor1")
 datasets=("test_seen_both.csv" "test_unseen_both.csv" "test_unseen_pep.csv" "test_unseen_tcr.csv")
 datasets=("PIRD" "IEDB" "VDJdb" "McPAS")
 # for dataset in "${datasets[@]}"; do
-#     CUDA_VISIBLE_DEVICES=0 python epigen/run_clm_predict.py \
+#     CUDA_VISIBLE_DEVICES=0 python research/epigen/run_clm_predict.py \
 #         --model_name_or_path gpt2-small \
 #         --train_file data/train.csv \
 #         --validation_file data/val.csv \
 #         --per_device_train_batch_size 32 \
 #         --per_device_eval_batch_size 32 \
 #         --num_train_epochs 101 \
-#         --tokenizer_name regaler/EpiGen \
+#         --tokenizer_name research/regaler/EpiGen \
 #         --checkpointing_steps epoch \
 #         --with_tracking \
 #         --report_to wandb \

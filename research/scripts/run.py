@@ -82,7 +82,7 @@ def test_evaluate():
 
 
     ### Naturalness evaluation
-    # from antigen_category_filter import run_blastp
+    # from research.epigen.antigen_category_filter import run_blastp
     # outdir = "figures_e28/3d"
     # data_csv = "../data/processed/processed_VDJdb_test.csv"
     # pred_csv = "predictions/241205_example_run/VDJdb/EpiGen_VDJdb.csv"
@@ -464,29 +464,29 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.preprocess:
-        from epigen.preprocess import *
+        from research.epigen.preprocess import *
         test_preprocess()
     elif args.utils:
-        from utils import *
+        from research.epigen.utils import *
         test_utils()
     elif args.select_tcr_pep_model:
         from tabr_bert_fork.select_tcr_pep_model import *
         test_select_tcr_pep_model()
     elif args.featurize:
-        from epigen.featurize import *
+        from research.epigen.featurize import *
         test_featurize()
     elif args.label_prop:
-        from epigen.label_prop import *
+        from research.epigen.label_prop import *
         test_label_prop()
     elif args.tokenizer:
-        from epigen.tokenizer import *
+        from research.epigen.tokenizer import *
         test_tokenizer()
     elif args.baselines:
-        from epigen.eval.baselines import *
+        from research.epigen.eval.baselines import *
         test_baselines()
     elif args.evaluate:
-        from epigen.eval.evaluate import *
+        from research.epigen.eval.evaluate import *
         test_evaluate()
     elif args.antigen_category_filter:
-        from epigen.antigen_category_filter import *
+        from research.epigen.antigen_category_filter import *
         test_antigen_category_filter()

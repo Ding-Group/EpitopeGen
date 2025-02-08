@@ -22,7 +22,7 @@ from statsmodels.stats.multitest import multipletests
 from umap import UMAP
 
 # Local imports
-from covid19_su.utils import *
+from research.covid19_su.utils import *
 
 
 def analysis_wrapper(data_dir, pred_csv, gex_cache, epi_db_path, obs_cache=None, outdir=None):

@@ -29,7 +29,7 @@ from tqdm import tqdm
 from tabr_bert_fork.bert_pmhc import BERT as pmhc_net
 from tabr_bert_fork.bert_tcr import BERT as tcr_net
 from tabr_bert_fork.tcr_pmhc_model import *  # NOTE: consider explicit imports instead of *
-from epigen.utils import adheres_to_vocab, index_to_aa
+from research.epigen.utils import adheres_to_vocab, index_to_aa
 
 
 class EpitopeFeaturizer:

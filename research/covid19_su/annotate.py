@@ -15,7 +15,7 @@ from scipy.stats import gaussian_kde
 from umap import UMAP
 
 # Local imports
-from covid19_su.utils import *
+from research.covid19_su.utils import *
 
 
 def annotation_wrapper(data_dir, pred_csv, epi_db_path, obs_cache=None, outdir=None, annotate_corona=False, match_method='levenshtein'):

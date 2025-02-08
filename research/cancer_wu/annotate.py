@@ -10,7 +10,7 @@ import Levenshtein
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
-from cancer_wu.utils import read_all_data
+from research.cancer_wu.utils import read_all_data
 
 
 def annotation_wrapper(data_dir, pred_csv=None, epi_db_path=None, obs_cache=None):

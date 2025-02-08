@@ -6,6 +6,7 @@ import pickle
 import subprocess
 import os
 
+RESEARCH_PATH = ""
 INPUT = "../coreset/data/tcrmodel2_args.pkl"
 
 # Load the arguments from the pickle file

@@ -81,14 +81,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.download:
-        from cancer_wu.download import *
+        from research.cancer_wu.download import *
         test_download()
     elif args.utils:
-        from cancer_wu.utils import *
+        from research.cancer_wu.utils import *
         test_utils()
     elif args.annotate:
-        from cancer_wu.annotate import *
+        from research.cancer_wu.annotate import *
         test_annotate()
     elif args.analyze:
-        from cancer_wu.analyze import *
+        from research.cancer_wu.analyze import *
         test_analyze()

@@ -17,7 +17,6 @@ from mudata import MuData
 from tqdm import tqdm
 
 
-
 CELL_TYPES = ['8.1-Teff', '8.2-Tem', '8.3a-Trm', '8.3b-Trm', '8.3c-Trm']
 first_char = ['T', 't', 'x']
 second_char = ['N', 'n', 'x']

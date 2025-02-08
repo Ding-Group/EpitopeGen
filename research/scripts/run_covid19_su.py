@@ -44,11 +44,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.utils:
-        from covid19_su.utils import *
+        from research.covid19_su.utils import *
         test_utils()
     elif args.annotate:
-        from covid19_su.annotate import *
+        from research.covid19_su.annotate import *
         test_annotate()
     elif args.analyze:
-        from covid19_su.analyze import *
+        from research.covid19_su.analyze import *
         test_analyze()

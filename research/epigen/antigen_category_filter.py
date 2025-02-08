@@ -20,7 +20,7 @@ import seaborn as sns
 from tqdm import tqdm
 
 # Local codes
-from epigen.utils import measure_time
+from research.epigen.utils import measure_time
 
 os.environ['NUMBA_CACHE_DIR'] = '__pycache__'
 
