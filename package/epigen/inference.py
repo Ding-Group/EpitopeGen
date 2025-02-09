@@ -117,7 +117,7 @@ class EpiGenPredictor:
             for batch_idx in range(len(generated_sequences) // num_predictions):
                 tcr = self._decode_tcr(
                     encoded[batch_idx].tolist()
-                )
+                )[:-1]  # trim <|endoftext|>
                 preds_for_tcr = [tcr]
 
                 for seq_idx in range(num_predictions):
