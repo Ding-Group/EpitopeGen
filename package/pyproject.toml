@@ -1,0 +1,18 @@
+# package/pyproject.toml 생성
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epigen"
+version = "0.1.0"
+authors = [{name = "Minuk Ma", email = "minukma@cs.ubc.ca"}]
+description = "EpiGen: TCR-based epitope sequence prediction"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=1.10.0",
+    "transformers>=4.0.0",
+    "pandas>=1.0.0",
+    "numpy>=1.19.0"
+]
