@@ -156,6 +156,9 @@ def load_metadata(metadata_filename):
 
 
 def download_and_preprocess(outdir="cancer_wu/data", input_file="cancer_wu/data_links.txt"):
+    samples = ['CN1', 'CT2', 'EN3', 'ET3', 'LB6', 'LN3', 'LN6', 'LT3', 'LT6', 'RB2', 'RN2', 'RT2',
+               'CN2', 'EN1', 'ET1', 'LN1', 'LN4', 'LT1', 'LT4', 'RB3', 'RN3', 'RT3',
+               'CT1', 'EN2', 'ET2', 'LN2', 'LN5', 'LT2', 'LT5', 'RB1', 'RN1', 'RT1']
     # Get the files by referring to https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE139555
     with open(input_file, "r") as f:
         remote_filenames = f.readlines()
@@ -164,14 +167,25 @@ def download_and_preprocess(outdir="cancer_wu/data", input_file="cancer_wu/data_
     Path(outdir).mkdir(parents=True, exist_ok=True)
     Path(f"{outdir}/raw").mkdir(parents=True, exist_ok=True)
 
+    for sample in samples:
+        if os.path.isdir(f"{outdir}/{sample}"):
+            data_exists = True
+        else:
+            data_exists = False
+
+    if data_exists:
+        print(f"Cancer wu data already exists in {outdir}")
+        return
+
     # Download the necessary data
-    # for filename, local_filename in zip(remote_filenames, local_filenames):
-    #     download_file(filename, local_filename)
+    for filename, local_filename in zip(remote_filenames, local_filenames):
+        download_file(filename, local_filename)
 
     # Extract the files
     for gz_file in os.listdir(outdir):
         if gz_file.endswith(".gz"):
             extract_gz_file(gz_filename=f"{outdir}/{gz_file}")
+            os.remove(f"{outdir}/{gz_file}")
 
     # Convert RDS to AnnData
     rds_file = [f"{outdir}/{x}" for x in os.listdir(outdir) if x.endswith(".rds")][0]
@@ -184,9 +198,22 @@ def download_and_preprocess(outdir="cancer_wu/data", input_file="cancer_wu/data_
     # Load metadata
     meta_filename = [f"{outdir}/{x}" for x in os.listdir(outdir) if x.endswith("metadata.txt")][0]
     metadata = load_metadata(meta_filename)
+    adata.obs = metadata
 
     # Save the processed / converted data
     adata.write_h5ad(f"{outdir}/GSE139555_tcell_integrated.h5ad")
     metadata.to_csv(f"{outdir}/GSE139555%5Ftcell%5Fmetadata.txt")
     print(f"{outdir}/GSE139555_tcell_integrated.h5ad")
     print(f"{outdir}/GSE139555%5Ftcell%5Fmetadata.txt")
+
+    # Structure the data by sample
+    for sample in samples:
+        Path(f"{outdir}/{sample}").mkdir(parents=True, exist_ok=True)
+
+    def _parse(x):
+        return x.split(".")[0].split("2D")[1].upper()
+
+    files = [x for x in os.listdir(outdir) if x.startswith("GSM")]
+    for file in files:
+        sample = _parse(f"{outdir}/{file}")
+        os.rename(f"{outdir}/{file}", f"{outdir}/{sample}/{file}")

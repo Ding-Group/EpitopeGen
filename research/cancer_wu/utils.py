@@ -96,13 +96,14 @@ def get_cd8_tcells_with_tcrs(df):
     return df
 
 
-def read_tcell_integrated(data_dir):
+def read_tcell_integrated(data_dir, transpose=False):
     """
     Read the main gene expression data
     """
     # Read the H5AD file
     adata = sc.read_h5ad(f"{data_dir}/GSE139555_tcell_integrated.h5ad")
-    adata = adata.transpose()
+    if transpose:
+        adata = adata.transpose()
     metadata = pd.read_csv(f"{data_dir}/GSE139555%5Ftcell%5Fmetadata.txt", sep="\t", index_col=0)
     # Make sure the index of the metadata matches the obs_names of the AnnData object
     adata.obs = adata.obs.join(metadata, how='left')
@@ -110,7 +111,7 @@ def read_tcell_integrated(data_dir):
     return adata
 
 
-def read_all_data(data_dir, obs_cache=None, filter_cdr3_notna=True, filter_cell_types=True, cdr_annotation_path=None):
+def read_all_data(data_dir, obs_cache=None, filter_cdr3_notna=True, filter_cell_types=True):
     """
     The main function to read CD8+ T cell data from Wu et al. dataset
     Both gene expression and TCR sequences are read
@@ -127,20 +128,22 @@ def read_all_data(data_dir, obs_cache=None, filter_cdr3_notna=True, filter_cell_
     filter_cell_types: bool
         Drop the rows that are not CD8+ T cells
     """
+    samples = ['CN1', 'CT2', 'EN3', 'ET3', 'LB6', 'LN3', 'LN6', 'LT3', 'LT6', 'RB2', 'RN2', 'RT2',
+               'CN2', 'EN1', 'ET1', 'LN1', 'LN4', 'LT1', 'LT4', 'RB3', 'RN3', 'RT3',
+               'CT1', 'EN2', 'ET2', 'LN2', 'LN5', 'LT2', 'LT5', 'RB1', 'RN1', 'RT1']
     # Read T-cell integrated (gene expression data)
     adata = read_tcell_integrated(data_dir)
+
     # Read the TCR sequencing data using scirpy (ir)
     airrs = []
-    for sample in os.listdir(data_dir):
-        if os.path.isdir(f"{data_dir}/{sample}"):
-            for x in os.listdir(f"{data_dir}/{sample}"):
-                if x.endswith("contig_annotations.csv"):
-                    airr = ir.io.read_10x_vdj(f"{data_dir}/{sample}/{x}")
-                    # Add a column to identify the source file
-                    sample_name = x.split("-")[1].split(".")[0]
-                    airr.obs['new_cell_id'] = airr.obs.index.map(lambda x: sample_name.upper() + "_" + x)
-                    airr.obs.index = airr.obs['new_cell_id']
-                    airrs.append(airr)
+    for sample in [s for s in os.listdir(data_dir) if s in samples]:
+        for x in os.listdir(f"{data_dir}/{sample}"):
+            if x.endswith("contig_annotations.csv") or x.endswith("annotations.csv"):
+                airr = ir.io.read_10x_vdj(f"{data_dir}/{sample}/{x}")
+                # Add a column to identify the source file
+                airr.obs['new_cell_id'] = airr.obs.index.map(lambda x: sample + "_" + x)
+                airr.obs.index = airr.obs['new_cell_id']
+                airrs.append(airr)
     # Merge the AIRR objects
     if len(airrs) > 1:
         merged_airr = ad.concat(airrs)
@@ -150,21 +153,26 @@ def read_all_data(data_dir, obs_cache=None, filter_cdr3_notna=True, filter_cell_
     if obs_cache:
         print(f"Reading cache from {obs_cache}..")
         df_cache = pd.read_csv(obs_cache)
-        try:
-            # Ensure that df_cache has the same index as adata.obs
-            df_cache.index = adata.obs.index
-            # Assign df_cache back to adata.obs
-            adata.obs = df_cache
-        except:
-            df_tmp = pd.read_csv(cdr_annotation_path)
-            df_tmp.index = adata.obs.index
-            adata.obs = df_tmp
-            valid_cells = adata.obs['cdr3'].notna()
-            adata = adata[valid_cells].copy()
-            print(f"Set the index using cdr_annotation_path: {cdr_annotation_path}. \nIn the future, the annotation should save the cell indices (barcodes). ")
-            # Ensure that df_cache has the same index as adata.obs
-            df_cache.index = adata.obs.index
-            adata.obs = df_cache
+
+        # Merge df_cache to adata.obs based on cell_id
+        # Set cell_id as index in df_cache to match adata.obs
+        df_cache = df_cache.set_index('cell_id')
+
+        # Keep only the cells that exist in df_cache
+        common_cells = adata.obs.index.intersection(df_cache.index)
+        adata = adata[common_cells].copy()
+
+        # Update adata.obs with all columns from df_cache
+        # This will overwrite existing columns and add new ones
+        adata.obs = adata.obs.combine_first(df_cache)
+
+        # For columns that exist in both, prefer df_cache values
+        for col in df_cache.columns:
+            if col in adata.obs:
+                adata.obs[col] = df_cache[col]
+
+        print(f"Updated adata.obs with {len(df_cache.columns)} columns from cache")
+        print(f"Retained {len(common_cells)} cells after matching with cache")
 
     if filter_cell_types:
         print("Get only CD8+ T cells..")
@@ -230,7 +238,7 @@ def filter_and_update_combined_adata(combined_adata, processed_adata):
         # Copy the data from processed_adata.obs to filtered_combined_adata.obs, matching by index
         filtered_combined_adata.obs[col] = processed_adata.obs.loc[common_indices, col]
 
-    print("Filtered the combined data using the processed adata! (Finding intersection). Num of rows={len(filtered_combined_adata)}")
+    print(f"Filtered the combined data using the processed adata! (Finding intersection). Num of rows={len(filtered_combined_adata)}")
 
     return filtered_combined_adata
 
