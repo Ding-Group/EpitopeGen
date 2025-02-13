@@ -1,4 +1,4 @@
-# package/epigen/config.py
+# package/epitopegen/config.py
 import os
 from pathlib import Path
 
@@ -8,20 +8,20 @@ RESOURCES_PATH = PACKAGE_ROOT / "resources"
 TOKENIZER_PATH = RESOURCES_PATH / "tokenizer"
 
 # Model configuration
-DEFAULT_CACHE_DIR = os.path.expanduser("./.cache/epigen")
+DEFAULT_CACHE_DIR = os.path.expanduser("./.cache/epitopegen")
 ZENODO_URL = "https://zenodo.org/records/14853949/files/250211_checkpoints.zip"
 MODEL_CHECKPOINTS = {
-    "ckpt1": "checkpoints/EpiGen_weight_1/epoch_28/pytorch_model.bin",
-    "ckpt2": "checkpoints/EpiGen_weight_2/epoch_26/pytorch_model.bin",
-    "ckpt3": "checkpoints/EpiGen_weight_3/epoch_19/pytorch_model.bin",
-    "ckpt4": "checkpoints/EpiGen_weight_4/epoch_21/pytorch_model.bin",
-    "ckpt5": "checkpoints/EpiGen_weight_5/epoch_28/pytorch_model.bin",
-    "ckpt6": "checkpoints/EpiGen_weight_6/epoch_28/pytorch_model.bin",
-    "ckpt7": "checkpoints/EpiGen_weight_7/epoch_24/pytorch_model.bin",
-    "ckpt8": "checkpoints/EpiGen_weight_8/epoch_22/pytorch_model.bin",
-    "ckpt9": "checkpoints/EpiGen_weight_9/epoch_24/pytorch_model.bin",
-    "ckpt10": "checkpoints/EpiGen_weight_10/epoch_20/pytorch_model.bin",
-    "ckpt11": "checkpoints/EpiGen_weight_11/epoch_21/pytorch_model.bin",
+    "ckpt1": "checkpoints/epitopegen_weight_1/epoch_28/pytorch_model.bin",
+    "ckpt2": "checkpoints/epitopegen_weight_2/epoch_26/pytorch_model.bin",
+    "ckpt3": "checkpoints/epitopegen_weight_3/epoch_19/pytorch_model.bin",
+    "ckpt4": "checkpoints/epitopegen_weight_4/epoch_21/pytorch_model.bin",
+    "ckpt5": "checkpoints/epitopegen_weight_5/epoch_28/pytorch_model.bin",
+    "ckpt6": "checkpoints/epitopegen_weight_6/epoch_28/pytorch_model.bin",
+    "ckpt7": "checkpoints/epitopegen_weight_7/epoch_24/pytorch_model.bin",
+    "ckpt8": "checkpoints/epitopegen_weight_8/epoch_22/pytorch_model.bin",
+    "ckpt9": "checkpoints/epitopegen_weight_9/epoch_24/pytorch_model.bin",
+    "ckpt10": "checkpoints/epitopegen_weight_10/epoch_20/pytorch_model.bin",
+    "ckpt11": "checkpoints/epitopegen_weight_11/epoch_21/pytorch_model.bin",
 }
 DEFAULT_CHECKPOINT = MODEL_CHECKPOINTS["ckpt1"]
 GENES_OF_INTEREST = [

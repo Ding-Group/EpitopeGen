@@ -1,8 +1,8 @@
 """
-EpiGen: Single-cell TCR-based epitope sequence prediction
+EpitopeGen: Single-cell TCR-based epitope sequence prediction
 """
 
-from .inference import EpiGenPredictor
+from .inference import EpitopeGenPredictor
 from .annotate import EpitopeAnnotator,EpitopeEnsembler,visualize_match_overlaps_parallel
 from .config import (
     TOKENIZER_PATH,
@@ -19,7 +19,7 @@ from .analyze_pa import PARatioAnalyzer
 __version__ = "0.1.0"
 
 __all__ = [
-    "EpiGenPredictor",
+    "EpitopeGenPredictor",
     "EpitopeAnnotator",
     "visualize_match_overlaps_parallel",
     "EpitopeEnsembler",

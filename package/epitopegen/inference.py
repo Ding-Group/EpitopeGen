@@ -1,4 +1,4 @@
-# package/epigen/inference.py
+# package/epitopegen/inference.py
 
 import torch
 import warnings
@@ -21,7 +21,7 @@ from .config import (
     DEFAULT_CACHE_DIR
 )
 
-class EpiGenPredictor:
+class EpitopeGenPredictor:
     ZENODO_URL = ZENODO_URL
     DEFAULT_CHECKPOINT = DEFAULT_CHECKPOINT
     AVAILABLE_CHECKPOINTS = MODEL_CHECKPOINTS
@@ -36,7 +36,7 @@ class EpiGenPredictor:
         batch_size: int = 32,
         cache_dir: str = None
     ):
-        """Initialize EpiGen predictor.
+        """Initialize epitopegen predictor.
 
         Args:
             checkpoint_path: Path to model checkpoint directory or checkpoint name (e.g., 'ckpt1')
@@ -45,7 +45,7 @@ class EpiGenPredictor:
             device: Device to run inference on ('cuda', 'cpu', or None for auto)
             special_token_id: Special token ID used as separator (default: 2)
             batch_size: Batch size for inference (default: 32)
-            cache_dir: Directory to store downloaded checkpoints (default: ~/.cache/scepigen)
+            cache_dir: Directory to store downloaded checkpoints (default: ~/.cache/epitopegen)
         """
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         self.special_token_id = special_token_id
@@ -299,7 +299,7 @@ class EpiGenPredictor:
             stats['output_path'] = str(output_path)
 
         # Print informative summary
-        print("\n=== EpiGen Prediction Summary ===")
+        print("\n=== epitopegen Prediction Summary ===")
         print(f"• Processed {stats['num_tcrs']} TCR sequences")
         print(f"• Generated {stats['num_predictions_per_tcr']} predictions per TCR")
         print(f"• Average TCR length: {stats['avg_tcr_length']:.1f}")

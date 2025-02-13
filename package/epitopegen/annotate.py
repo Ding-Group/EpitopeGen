@@ -1,4 +1,4 @@
-# package/epigen/annotate.py
+# package/epitopegen/annotate.py
 
 import os
 import numpy as np
@@ -107,7 +107,7 @@ class EpitopeAnnotator:
         """Annotate predictions with phenotype associations.
 
         Args:
-            predictions_df: DataFrame from EpiGenPredictor with 'tcr' and 'pred_*' columns
+            predictions_df: DataFrame from epitopegenPredictor with 'tcr' and 'pred_*' columns
             method: Matching method ('levenshtein' or 'substring')
             threshold: Maximum Levenshtein distance for matches
             top_k: Number of top predictions to analyze
@@ -120,7 +120,7 @@ class EpitopeAnnotator:
             - ref_epitope_*: Matching reference epitopes
             - ref_protein_*: Source proteins for matches
         """
-        print("\n=== Starting EpiGen Annotation ===")
+        print("\n=== Starting epitopegen Annotation ===")
         print(f"• Method: {method}")
         print(f"• Distance threshold: {threshold}")
         print(f"• Analyzing top {top_k} predictions")
@@ -301,7 +301,7 @@ class EpitopeEnsembler:
         Returns:
             DataFrame with ensembled annotations
         """
-        print("\n=== Starting EpiGen Ensemble ===")
+        print("\n=== Starting epitopegen Ensemble ===")
         print(f"• Processing {len(annotation_files)} annotation files")
         print(f"• Voting threshold: {self.threshold}")
         print(f"• Analyzing top {top_k} predictions")
