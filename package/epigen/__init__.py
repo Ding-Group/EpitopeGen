@@ -14,6 +14,7 @@ from .config import (
     GENE_GROUPS
 )
 from .analyze_deg import DEGAnalyzer
+from .analyze_pa import PARatioAnalyzer
 
 __version__ = "0.1.0"
 
@@ -25,5 +26,6 @@ __all__ = [
     "TOKENIZER_PATH",
     "MODEL_CHECKPOINTS",
     "ZENODO_URL",
-    "DEGAnalyzer"
+    "DEGAnalyzer",
+    "PARatioAnalyzer"
 ]
