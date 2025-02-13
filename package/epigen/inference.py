@@ -13,29 +13,24 @@ import os
 from tqdm import tqdm
 from typing import List, Dict
 
+from .config import (
+    TOKENIZER_PATH,
+    MODEL_CHECKPOINTS,
+    ZENODO_URL,
+    DEFAULT_CHECKPOINT,
+    DEFAULT_CACHE_DIR
+)
 
 class EpiGenPredictor:
-    ZENODO_URL = "https://zenodo.org/records/14853949/files/250211_checkpoints.zip"
-    DEFAULT_CHECKPOINT = "checkpoints/EpiGen_weight_1/epoch_28/pytorch_model.bin"
-    AVAILABLE_CHECKPOINTS = {
-        "ckpt1": "checkpoints/EpiGen_weight_1/epoch_28/pytorch_model.bin",
-        "ckpt2": "checkpoints/EpiGen_weight_2/epoch_26/pytorch_model.bin",
-        "ckpt3": "checkpoints/EpiGen_weight_3/epoch_19/pytorch_model.bin",
-        "ckpt4": "checkpoints/EpiGen_weight_4/epoch_21/pytorch_model.bin",
-        "ckpt5": "checkpoints/EpiGen_weight_5/epoch_28/pytorch_model.bin",
-        "ckpt6": "checkpoints/EpiGen_weight_6/epoch_28/pytorch_model.bin",
-        "ckpt7": "checkpoints/EpiGen_weight_7/epoch_24/pytorch_model.bin",
-        "ckpt8": "checkpoints/EpiGen_weight_8/epoch_22/pytorch_model.bin",
-        "ckpt9": "checkpoints/EpiGen_weight_9/epoch_24/pytorch_model.bin",
-        "ckpt10": "checkpoints/EpiGen_weight_10/epoch_20/pytorch_model.bin",
-        "ckpt11": "checkpoints/EpiGen_weight_11/epoch_21/pytorch_model.bin",
-    }
+    ZENODO_URL = ZENODO_URL
+    DEFAULT_CHECKPOINT = DEFAULT_CHECKPOINT
+    AVAILABLE_CHECKPOINTS = MODEL_CHECKPOINTS
 
     def __init__(
         self,
         checkpoint_path: str = None,
         model_path: str = "gpt2-small",
-        tokenizer_path: str = "research/regaler/EpiGen",
+        tokenizer_path: str = None,  # Changed default
         device: str = None,
         special_token_id: int = 2,
         batch_size: int = 32,
@@ -44,19 +39,21 @@ class EpiGenPredictor:
         """Initialize EpiGen predictor.
 
         Args:
-            checkpoint_path: Path to model checkpoint directory or checkpoint name ('ckpt3', 'ckpt4', 'ckpt5')
+            checkpoint_path: Path to model checkpoint directory or checkpoint name (e.g., 'ckpt1')
             model_path: Base model path (default: gpt2-small)
-            tokenizer_path: Path to tokenizer (default: regaler/EpiGen)
+            tokenizer_path: Path to tokenizer (default: package's built-in tokenizer)
             device: Device to run inference on ('cuda', 'cpu', or None for auto)
-            special_token_id: Special token ID used as separator (default: 2).
-                In some training, it maybe 400.
+            special_token_id: Special token ID used as separator (default: 2)
             batch_size: Batch size for inference (default: 32)
-            cache_dir: Directory to store downloaded checkpoints (default: ~/.cache/epigen)
+            cache_dir: Directory to store downloaded checkpoints (default: ~/.cache/scepigen)
         """
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         self.special_token_id = special_token_id
         self.batch_size = batch_size
-        self.cache_dir = cache_dir or os.path.expanduser(".cache/epigen")
+        self.cache_dir = cache_dir or DEFAULT_CACHE_DIR
+
+        # Use package's tokenizer by default
+        tokenizer_path = tokenizer_path or TOKENIZER_PATH
 
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
