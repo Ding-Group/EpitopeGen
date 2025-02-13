@@ -2,6 +2,8 @@
 
 EpiGen is a deep learning model that predicts cognate epitope sequences from T-cell receptor (TCR) sequences. It helps functionally annotate TCRs in single-cell TCR sequencing data by generating potential binding epitopes and identifying phenotype associations.
 
+<img src="./overview.PNG" alt="EpiGen" style="zoom:150%;" />
+
 ## Installation
 
 ```bash
