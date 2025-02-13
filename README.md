@@ -1,22 +1,22 @@
-# EpiGen
+# EpitopeGen
 
-EpiGen is a deep learning model that predicts cognate epitope sequences from T-cell receptor (TCR) sequences. It helps functionally annotate TCRs in single-cell TCR sequencing data by generating potential binding epitopes and identifying phenotype associations.
+EpitopeGen is a deep learning model that predicts cognate epitope sequences from T-cell receptor (TCR) sequences. It helps functionally annotate TCRs in single-cell TCR sequencing data by generating potential binding epitopes and identifying phenotype associations.
 
-<img src="./overview.PNG" alt="EpiGen" style="zoom:150%;" />
+<img src="./overview.PNG" alt="EpitopeGen" style="zoom:150%;" />
 
 ## Installation
 
 ```bash
-pip install epigen
+pip install epitopegen
 ```
 
 ## Quick Start
 
 ```python
-from epigen import EpiGenPredictor
+from epitopegen import EpitopeGenPredictor
 
 # Initialize predictor
-predictor = EpiGenPredictor()
+predictor = EpitopeGenPredictor()
 
 # Predict epitopes for TCR sequences
 tcrs = ["CASIPEGGRETQYF", "CAVRATGTASKLTF"]
@@ -38,10 +38,10 @@ CAVRATGTASKLTF,ZZZZZ
 
 ```python
 import pandas as pd
-from epigen import EpiGenPredictor
+from epitopegen import EpitopeGenPredictor
 
 # Initialize predictor
-predictor = EpiGenPredictor(tokenizer_path="research/regaler/EpiGen")
+predictor = EpitopeGenPredictor()
 
 # Read TCR sequences
 tcrs = pd.read_csv("input.csv")["text"].tolist()
@@ -57,7 +57,7 @@ results = predictor.predict(
 ### 3. Annotate Phenotypes
 
 ```python
-from epigen import EpitopeAnnotator
+from epitopegen import EpitopeAnnotator
 
 # Initialize annotator with reference database
 annotator = EpitopeAnnotator("epitopes_db.csv")
@@ -80,7 +80,7 @@ results = annotator.annotate(
 
 ## Resources
 
-- [Detailed Tutorial](https://github.com/Regaler/EpiGen/tutorials)
+- [Detailed Tutorial](https://github.com/Regaler/EpitopeGen/tutorials)
 - [Model Checkpoints](https://zenodo.org/records/14853949)
 - [Reference Databases](https://zenodo.org/records/14861398)
 - [Development Resources](https://zenodo.org/records/14286754)
@@ -94,9 +94,9 @@ results = annotator.annotate(
 
 ## Citation
 
-If you use EpiGen in your research, please cite:
+If you use EpitopeGen in your research, please cite:
 ```bibtex
-@article{epigen2024,
+@article{epitopegen2024,
   title={Generating cognate epitope sequences of T-cell receptors with a generative transformer},
   year={2024}
 }
@@ -109,5 +109,5 @@ MIT License
 ## Support
 
 For questions and issues:
-- Open an issue on [GitHub](https://github.com/regaler/epigen/issues)
+- Open an issue on [GitHub](https://github.com/regaler/epitopegen/issues)
 - Contact: minukma@cs.ubc.cs
