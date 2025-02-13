@@ -13,7 +13,7 @@ from .config import (
     GENES_OF_INTEREST,
     GENE_GROUPS
 )
-from .analyze import DEGAnalyzer
+from .analyze_deg import DEGAnalyzer
 
 __version__ = "0.1.0"
 
