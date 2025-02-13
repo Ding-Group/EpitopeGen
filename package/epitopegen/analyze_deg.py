@@ -9,8 +9,19 @@ from pathlib import Path
 from .config import GENES_OF_INTEREST,GENE_GROUPS
 
 class DEGAnalyzer:
-    """Class for performing differential expression gene analysis between PA and NA cells."""
+    """A class for performing differential expression gene analysis between PA and NA cells.
 
+    Analyzes differential gene expression between phenotype-associated (PA) and
+    not-associated (NA) cells, with support for custom gene groups and site patterns.
+
+    Attributes:
+        genes_of_interest: List of genes to analyze.
+        gene_groups: Dictionary mapping group names to lists of genes.
+        patterns_list: List of lists containing site patterns to analyze.
+        pattern_names: Names corresponding to site patterns.
+        output_dir: Path object for the results directory.
+        top_k: Number of top matches to consider for PA cells.
+    """
     def __init__(
         self,
         genes_of_interest: List[str] = GENES_OF_INTEREST,
@@ -20,15 +31,22 @@ class DEGAnalyzer:
         output_dir: str = "results",
         top_k: int = 1
     ):
-        """Initialize DEG analyzer.
+        """Initializes the DEG analyzer with specified parameters.
 
         Args:
-            genes_of_interest: List of genes to analyze
-            gene_groups: Dictionary mapping group names to lists of genes
-            patterns_list: List of lists containing site patterns to analyze
-            pattern_names: Names corresponding to site patterns
-            output_dir: Directory to save results (default: "results")
-            top_k: Number of top matches to consider for PA cells (default: 1)
+            genes_of_interest: List of genes to analyze in the differential
+                expression analysis.
+            gene_groups: Dictionary mapping group names to lists of genes for
+                grouped analysis.
+            patterns_list: List of lists containing site patterns to analyze.
+                Optional for pattern-specific analysis.
+            pattern_names: Names corresponding to site patterns. Required if
+                patterns_list is provided.
+            output_dir: Directory path to save analysis results (default: "results").
+            top_k: Number of top matches to consider for PA cells (default: 1).
+
+        Raises:
+            ValueError: If input parameters are invalid or inconsistent.
         """
         self.genes_of_interest = genes_of_interest
         self.gene_groups = gene_groups
@@ -44,7 +62,16 @@ class DEGAnalyzer:
         self._validate_inputs()
 
     def _validate_inputs(self):
-        """Validate input parameters."""
+        """Validates the initialization input parameters.
+
+        Checks for:
+            - Non-empty genes_of_interest list
+            - Non-empty gene_groups dictionary
+            - Matching lengths of patterns_list and pattern_names if provided
+
+        Raises:
+            ValueError: If any validation check fails.
+        """
         if not self.genes_of_interest:
             raise ValueError("genes_of_interest cannot be empty")
 
@@ -58,13 +85,21 @@ class DEGAnalyzer:
                 raise ValueError("Length of patterns_list must match pattern_names")
 
     def prepare_data(self, adata: sc.AnnData) -> sc.AnnData:
-        """Preprocess the input data.
+        """Preprocesses the input gene expression data.
+
+        Performs standard single-cell preprocessing steps including total count
+        normalization and log transformation.
 
         Args:
-            adata: AnnData object containing gene expression data
+            adata: AnnData object containing gene expression data.
 
         Returns:
-            Preprocessed AnnData object
+            sc.AnnData: Preprocessed copy of the input data with:
+                - Total counts normalized to 1e4
+                - Log1p transformed expression values
+
+        Note:
+            Creates a copy of the input data to preserve the original.
         """
         adata = adata.copy()
         sc.pp.normalize_total(adata, target_sum=1e4)
@@ -72,7 +107,23 @@ class DEGAnalyzer:
         return adata
 
     def _create_pa_mask(self, adata: sc.AnnData) -> pd.Series:
-        """Create mask for PA cells considering top K matches."""
+        """Creates a boolean mask identifying phenotype-associated (PA) cells.
+
+        Identifies PA cells by checking match columns up to top_k, where a cell
+        is considered PA if it has a match in any of the considered positions.
+
+        Args:
+            adata: AnnData object containing match information in obs columns
+                (match_0 through match_{top_k-1}).
+
+        Returns:
+            pd.Series: Boolean mask with True for PA cells and False for NA cells,
+                indexed by cell names.
+
+        Note:
+            Looks for match columns named 'match_0' through 'match_{top_k-1}'
+            in adata.obs.
+        """
         pa_mask = pd.Series(False, index=adata.obs.index)
         for k in range(self.top_k):
             match_col = f'match_{k}'
@@ -81,16 +132,30 @@ class DEGAnalyzer:
         return pa_mask
 
     def perform_deg_analysis(self, adata: sc.AnnData) -> Tuple[Dict, int, int]:
-        """Perform differential expression analysis between PA and NA cells.
+        """Performs differential expression analysis between PA and NA cells.
+
+        Conducts Wilcoxon rank-sum test to identify differentially expressed genes
+        between phenotype-associated (PA) and non-associated (NA) cells.
 
         Args:
-            adata: AnnData object containing gene expression data
+            adata: AnnData object containing gene expression data and match information
+                in obs columns.
 
         Returns:
-            Tuple containing:
-                - Dictionary of DEG results
-                - Number of PA cells
-                - Total number of cells
+            tuple: A tuple containing:
+                - dict: Results dictionary mapping each gene to its statistics:
+                    - logfoldchange: Log fold change between PA and NA cells
+                    - pval: Raw p-value from Wilcoxon test
+                    - pval_adj: Adjusted p-value for multiple testing
+                    - pct_pa: Percentage of PA cells expressing the gene
+                    - pct_na: Percentage of NA cells expressing the gene
+                - int: Number of PA cells identified
+                - int: Total number of cells analyzed
+
+        Note:
+            - Uses scanpy's rank_genes_groups with Wilcoxon test
+            - Returns empty results with appropriate structure if analysis fails
+            - Handles missing genes and failed computations gracefully
         """
         # Initialize groups
         adata.obs['comparison_group'] = 'NA'
@@ -153,7 +218,20 @@ class DEGAnalyzer:
             return {gene: self._get_empty_result() for gene in self.genes_of_interest}, 0, 0
 
     def _get_empty_result(self) -> Dict:
-        """Get empty result dictionary for missing genes."""
+        """Creates an empty result dictionary for missing or failed gene analyses.
+
+        Returns:
+            dict: Dictionary with empty/null values for all result fields:
+                - logfoldchange: np.nan
+                - pval: np.nan
+                - pval_adj: np.nan
+                - pct_pa: None
+                - pct_na: None
+
+        Note:
+            Used as a fallback when gene analysis fails or gene is not found
+            in the dataset.
+        """
         return {
             'logfoldchange': np.nan,
             'pval': np.nan,
@@ -168,14 +246,48 @@ class DEGAnalyzer:
         pattern_names_with_stats: Optional[List[str]] = None,
         is_heatmap: bool = False
     ):
-        """Create visualization of differential expression results."""
+        """Creates visualization of differential expression analysis results.
+
+        Generates either a heatmap or barplot visualization of the DEG analysis
+        results, depending on the specified parameters.
+
+        Args:
+            results: Dictionary containing differential expression results for
+                each gene.
+            pattern_names_with_stats: Optional list of pattern names with their
+                statistics for labeling (default: None).
+            is_heatmap: Whether to create a heatmap (True) or barplot (False)
+                visualization (default: False).
+
+        Note:
+            - For heatmaps, uses pattern_names_with_stats for row labels
+            - For barplots, shows logfoldchange values with significance markers
+            - Saves visualization to the specified output directory
+        """
         if is_heatmap:
             self._create_heatmap_visualization(results, pattern_names_with_stats)
         else:
             self._create_barplot_visualization(results)
 
     def _create_barplot_visualization(self, results: Dict):
-        """Create grouped bar plot visualization of DEG results."""
+        """Creates a grouped bar plot visualization of differential expression results.
+
+        Generates a bar plot showing log fold changes for each gene, grouped by their
+        functional categories, with significance markers.
+
+        Args:
+            results: Dictionary mapping genes to their differential expression results,
+                containing:
+                - logfoldchange: Log2 fold change between PA and NA cells
+                - pval_adj: Adjusted p-value for significance testing
+
+        Note:
+            - Bars are colored red for positive and blue for negative fold changes
+            - Significance levels are indicated with stars above/below bars
+            - Groups are labeled on the x-axis with vertical text
+            - Plot is saved as 'deg_grouped_topk_{k}.pdf' in the output directory
+            - Y-axis is limited to [-2, 2] for better visualization
+        """
         plt.figure(figsize=(15, 10))
         plt.ylim(-2, 2)
 
@@ -232,7 +344,27 @@ class DEGAnalyzer:
         plt.close()
 
     def _create_heatmap_visualization(self, results: Dict, pattern_names_with_stats: List[str]):
-        """Create heatmap visualization of DEG results across patterns."""
+        """Creates a heatmap visualization of differential expression across patterns.
+
+        Generates a heatmap showing log fold changes for each gene across different
+        expansion patterns, with genes grouped by functional categories and sorted
+        by average fold change within groups.
+
+        Args:
+            results: Nested dictionary structure:
+                {pattern: {gene: {logfoldchange: float, pval_adj: float}}}
+                containing differential expression results for each pattern and gene.
+            pattern_names_with_stats: List of pattern names with additional statistics
+                for column labels.
+
+        Note:
+            - Uses RdBu_r colormap centered at 0
+            - Includes significance markers for adjusted p-values
+            - Groups are separated by horizontal lines
+            - Saves both PDF and PNG versions
+            - Numerical results are saved separately
+            - Heatmap cell values are formatted to 2 decimal places
+        """
         # Initialize lists to store genes and track group boundaries
         all_genes = []
         group_boundaries = []
@@ -294,14 +426,35 @@ class DEGAnalyzer:
         self._save_numerical_results(all_genes, group_boundaries, fold_changes, p_values, self.pattern_names)
 
     def _get_significance_stars(self, pvalue: float) -> str:
-        """Get significance stars based on p-value."""
+        """Converts p-values to significance star notation.
+
+        Args:
+            pvalue: Adjusted p-value from statistical test.
+
+        Returns:
+            str: Significance stars:
+                - '***' for p ≤ 0.001
+                - '**' for p ≤ 0.01
+                - '*' for p ≤ 0.05
+                - '' (empty string) for p > 0.05
+        """
         if pvalue <= 0.001: return '***'
         elif pvalue <= 0.01: return '**'
         elif pvalue <= 0.05: return '*'
         return ''
 
     def _create_plot_legends(self):
-        """Create and add legends to the current plot."""
+        """Creates and positions legends for significance levels and color coding.
+
+        Adds two legends to the current plot:
+            1. Color legend showing up/down regulation in PA cells
+            2. Significance level legend showing p-value thresholds
+
+        Note:
+            - Positions legends outside the main plot area
+            - Uses alpha=0.7 for color patches
+            - Adjusts subplot parameters to prevent legend overlap
+        """
         significance_elements = [
             plt.Text(0, 0, '*** p ≤ 0.001'),
             plt.Text(0, 0, '** p ≤ 0.01'),
@@ -321,7 +474,21 @@ class DEGAnalyzer:
         plt.subplots_adjust(bottom=0.2)
 
     def _add_significance_markers(self, all_genes: List[str], pattern_names: List[str], p_values: Dict):
-        """Add significance markers to heatmap."""
+        """Adds significance markers to heatmap cells.
+
+        Overlays significance stars on heatmap cells based on adjusted p-values.
+
+        Args:
+            all_genes: List of gene names in order of appearance on heatmap.
+            pattern_names: List of pattern names defining heatmap columns.
+            p_values: Dictionary mapping genes to lists of p-values, one per pattern.
+
+        Note:
+            Uses standard significance levels:
+            - '***' for p < 0.001
+            - '**' for p < 0.01
+            - '*' for p < 0.05
+        """
         for i, gene in enumerate(all_genes):
             for j in range(len(pattern_names)):
                 if p_values[gene][j] < 0.001:
@@ -332,7 +499,21 @@ class DEGAnalyzer:
                     plt.text(j + 0.7, i + 0.5, '*', ha='center', va='center')
 
     def _add_group_boundaries(self, group_boundaries: List[Tuple[str, int]], all_genes: List[str]):
-        """Add group labels and boundaries to heatmap."""
+        """Adds group labels and visual boundaries to heatmap.
+
+        Adds group names on the left side of the heatmap and horizontal white
+        lines between groups.
+
+        Args:
+            group_boundaries: List of tuples containing (group_name, ending_position)
+                for each gene group.
+            all_genes: List of all gene names to determine total heatmap height.
+
+        Note:
+            - Group names are right-aligned and bold
+            - White horizontal lines separate groups
+            - Group labels are centered vertically within their group
+        """
         prev_pos = 0
         for group_name, end_pos in group_boundaries:
             middle_pos = prev_pos + (end_pos - prev_pos)/2
@@ -351,7 +532,28 @@ class DEGAnalyzer:
         p_values: Dict,
         pattern_names: List[str]
     ):
-        """Save numerical results to CSV."""
+        """Saves numerical results of differential expression analysis to CSV.
+
+        Creates a comprehensive CSV file containing fold changes and p-values
+        for all genes across all patterns, including group assignments.
+
+        Args:
+            all_genes: Ordered list of genes included in the analysis.
+            group_boundaries: List of tuples containing (group_name, ending_position)
+                defining gene group boundaries.
+            fold_changes: Dictionary mapping genes to their fold change values
+                across patterns.
+            p_values: Dictionary mapping genes to their p-values across patterns.
+            pattern_names: List of pattern names used in the analysis.
+
+        Note:
+            Saves file as 'expression_analysis_results_k{top_k}.csv' in the
+            output directory with columns:
+            - Gene: Gene name
+            - Group: Functional group assignment
+            - {pattern}_fold_change: Log2 fold change for each pattern
+            - {pattern}_pvalue: Adjusted p-value for each pattern
+        """
         results_df = pd.DataFrame({
             'Gene': all_genes,
             'Group': [next(group_name for group_name, end_pos in group_boundaries if end_pos > i)
@@ -368,14 +570,27 @@ class DEGAnalyzer:
         adata: sc.AnnData,
         analyze_patterns: bool = False
     ) -> pd.DataFrame:
-        """Main method to analyze gene expression differences.
+        """Performs comprehensive differential expression analysis.
+
+        Main entry point for running the differential expression analysis,
+        with options for pattern-specific or global analysis.
 
         Args:
-            adata: AnnData object containing gene expression data
-            analyze_patterns: Whether to analyze expression patterns separately
+            adata: AnnData object containing gene expression data and cell
+                annotations.
+            analyze_patterns: If True, performs separate analyses for each pattern
+                in patterns_list. If False, analyzes all cells together
+                (default: False).
 
         Returns:
-            DataFrame containing analysis results
+            pd.DataFrame: Analysis results with genes as index and statistical
+                measures as columns. Format depends on analysis type:
+                - Global analysis: logfoldchange, pval, pval_adj per gene
+                - Pattern analysis: above statistics for each pattern
+
+        Note:
+            Automatically preprocesses data before analysis, including
+            normalization and log transformation.
         """
         # Preprocess data
         adata = self.prepare_data(adata)
@@ -386,7 +601,26 @@ class DEGAnalyzer:
             return self._analyze_all(adata)
 
     def _analyze_patterns(self, adata: sc.AnnData) -> pd.DataFrame:
-        """Analyze expression patterns separately."""
+        """Performs separate differential expression analyses for each pattern.
+
+        Analyzes differential expression between PA and NA cells for each pattern
+        in patterns_list, calculating statistics and storing results.
+
+        Args:
+            adata: AnnData object containing preprocessed gene expression data
+                and a 'pattern' column in obs containing pattern assignments.
+
+        Returns:
+            pd.DataFrame: Combined analysis results with columns:
+                {pattern_name}_{stat} for each pattern and statistic, where:
+                - pattern_name: Name of each analyzed pattern
+                - stat: One of [logfoldchange, pval, pval_adj, pct_pa, pct_na]
+
+        Note:
+            - Creates visualization of results across patterns
+            - Maintains statistics about PA cell percentages per pattern
+            - Filters data to include only cells belonging to each pattern
+        """
         pattern_results = {}
         pattern_stats = {}
 
@@ -419,7 +653,27 @@ class DEGAnalyzer:
         return self._prepare_pattern_results_df(pattern_results)
 
     def _analyze_all(self, adata: sc.AnnData) -> pd.DataFrame:
-        """Analyze all cells together."""
+        """Performs global differential expression analysis across all cells.
+
+        Analyzes differential expression between PA and NA cells without
+        pattern stratification, creating visualizations and saving results.
+
+        Args:
+            adata: AnnData object containing preprocessed gene expression data
+                and cell annotations.
+
+        Returns:
+            pd.DataFrame: Analysis results with genes as index and columns for:
+                - logfoldchange: Log2 fold change between PA and NA cells
+                - pval: Raw p-value
+                - pval_adj: Adjusted p-value
+                - pct_pa: Percentage of PA cells expressing the gene
+                - pct_na: Percentage of NA cells expressing the gene
+
+        Note:
+            Creates bar plot visualization of results automatically and saves
+            to output directory.
+        """
         results, _, _ = self.perform_deg_analysis(adata)
 
         self.create_visualization(
@@ -430,7 +684,26 @@ class DEGAnalyzer:
         return pd.DataFrame.from_dict(results, orient='index')
 
     def _prepare_pattern_results_df(self, pattern_results: Dict) -> pd.DataFrame:
-        """Prepare results DataFrame from pattern analysis."""
+        """Converts pattern-specific results into a combined DataFrame.
+
+        Processes the nested dictionary of pattern results into a wide-format
+        DataFrame with pattern-specific columns for each statistical measure.
+
+        Args:
+            pattern_results: Dictionary mapping pattern names to their respective
+                differential expression results dictionaries. Structure:
+                {pattern_name: {gene: {stat_name: value}}}
+
+        Returns:
+            pd.DataFrame: Wide-format DataFrame with:
+                - Index: Gene names
+                - Columns: {pattern}_{stat} for each pattern and statistical measure
+                - Values: Statistical results for each gene-pattern combination
+
+        Note:
+            Column names are prefixed with pattern names to distinguish
+            statistics across patterns.
+        """
         results_df = pd.DataFrame()
         for pattern in self.pattern_names:
             pattern_df = pd.DataFrame.from_dict(pattern_results[pattern], orient='index')

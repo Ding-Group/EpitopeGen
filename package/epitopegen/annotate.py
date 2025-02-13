@@ -14,20 +14,39 @@ import seaborn as sns
 
 
 class EpitopeAnnotator:
-    """Annotator for epitope predictions to identify phenotype associations."""
+    """A class for annotating epitope predictions with phenotype associations.
+
+    This annotator matches predicted epitopes against a reference database to identify
+    potential protein associations and phenotypes.
+
+    Attributes:
+        database: pandas DataFrame containing the reference epitopes and their
+            associated proteins.
+    """
 
     def __init__(self, database_path: str):
-        """Initialize the annotator with a reference database.
+        """Initializes the annotator with a reference epitope database.
 
         Args:
-            database_path: Path to CSV file containing reference epitopes
-                         Must have 'peptide' and 'protein' columns
+            database_path: Path to CSV file containing reference epitopes.
+                The CSV must contain at least 'peptide' and 'protein' columns.
+
+        Raises:
+            ValueError: If the database file lacks required columns.
+            FileNotFoundError: If the database file cannot be found.
         """
         self.database = pd.read_csv(database_path)
         self._validate_database()
 
     def _validate_database(self):
-        """Validate the reference database format."""
+        """Validates the format of the reference database.
+
+        Checks if the loaded database contains the required columns
+        ('peptide' and 'protein').
+
+        Raises:
+            ValueError: If any required columns are missing from the database.
+        """
         required_columns = {'peptide', 'protein'}
         if not all(col in self.database.columns for col in required_columns):
             raise ValueError(
@@ -36,7 +55,31 @@ class EpitopeAnnotator:
             )
 
     def _calculate_annotation_stats(self, df: pd.DataFrame, top_k: int) -> dict:
-        """Calculate annotation statistics with cumulative matches."""
+        """Calculates statistics about epitope matches and protein associations.
+
+        Computes various statistics about the matches between predicted epitopes
+        and reference database, including cumulative match rates and protein
+        distributions.
+
+        Args:
+            df: DataFrame containing prediction results with match and protein
+                reference columns (match_0, match_1, etc. and ref_protein_0,
+                ref_protein_1, etc.).
+            top_k: Number of top predictions to consider for statistics.
+
+        Returns:
+            dict: Dictionary containing the following statistics:
+                - total_tcrs: Number of TCR sequences analyzed
+                - total_predictions: Total number of predictions made
+                - cumulative_matches: Dict with statistics at each k:
+                    - tcrs_matched: Number of TCRs with at least one match
+                    - match_rate: Percentage of TCRs with matches
+                - matched_proteins: Dict of protein names and their frequencies
+
+        Note:
+            Match columns should be boolean indicators of whether each prediction
+            matched the reference database.
+        """
         match_cols = [f'match_{i}' for i in range(top_k) if f'match_{i}' in df.columns]
         protein_cols = [f'ref_protein_{i}' for i in range(top_k) if f'ref_protein_{i}' in df.columns]
 
@@ -77,6 +120,29 @@ class EpitopeAnnotator:
         max_length: int = 9,
         output_dir: Optional[str] = None,
     ) -> pd.DataFrame:
+        """Runs annotation on predictions from multiple model checkpoints.
+
+        Processes all prediction files in the specified directory, annotating each
+        with phenotype associations and saving results individually.
+
+        Args:
+            predictions_dir: Directory containing prediction CSV files from multiple models.
+            method: Method for matching epitopes. Either 'levenshtein' or 'substring'
+                (default: 'levenshtein').
+            threshold: Maximum Levenshtein distance for considering matches (default: 1).
+            top_k: Number of top predictions to analyze per TCR (default: 50).
+            max_length: Maximum length to consider for epitopes. Longer sequences will be
+                trimmed (default: 9).
+            output_dir: Directory to save annotation results. If None, results are only
+                returned.
+
+        Returns:
+            pd.DataFrame: Combined DataFrame containing annotations for all model predictions.
+
+        Note:
+            Expects prediction files to be named in format 'predictions_ckptN.csv' where
+            N is the checkpoint number.
+        """
         print(f"\n=== Running Multi-Model Annotation ===")
         pred_files = os.listdir(predictions_dir)
         print(f"• Using {len(pred_files)} model checkpoints")
@@ -104,21 +170,35 @@ class EpitopeAnnotator:
         max_length: int = 9,
         output_path: Optional[str] = None,
     ) -> pd.DataFrame:
-        """Annotate predictions with phenotype associations.
+        """Annotates predicted epitopes with phenotype associations from reference database.
+
+        Matches predicted epitopes against the reference database using either Levenshtein
+        distance or substring matching, identifying potential protein associations.
 
         Args:
-            predictions_df: DataFrame from epitopegenPredictor with 'tcr' and 'pred_*' columns
-            method: Matching method ('levenshtein' or 'substring')
-            threshold: Maximum Levenshtein distance for matches
-            top_k: Number of top predictions to analyze
-            max_length: Maximum length to consider for epitopes
-            output_path: Optional path to save results CSV
+            predictions_df: DataFrame containing TCR predictions. Must have 'tcr' column
+                and 'pred_0' through 'pred_{top_k-1}' columns.
+            method: Matching method to use. Either 'levenshtein' or 'substring'
+                (default: 'levenshtein').
+            threshold: Maximum Levenshtein distance for considering matches (default: 1).
+            top_k: Number of top predictions to analyze per TCR (default: 50).
+            max_length: Maximum length to consider for epitopes. Longer sequences will be
+                trimmed (default: 9).
+            output_path: Path to save annotation results CSV. If None, results are only
+                returned.
 
         Returns:
-            Annotated DataFrame with additional columns:
-            - match_*: Binary indicators for matches
-            - ref_epitope_*: Matching reference epitopes
-            - ref_protein_*: Source proteins for matches
+            pd.DataFrame: Original DataFrame with additional annotation columns:
+                - match_{i}: Boolean indicating if prediction i matched reference database
+                - ref_epitope_{i}: Matching reference epitope for prediction i
+                - ref_protein_{i}: Source protein for matching reference epitope i
+
+        Raises:
+            ValueError: If invalid method specified or no prediction columns found.
+
+        Note:
+            Prints detailed statistics about matches and protein associations, including
+            cumulative match rates at different k values and top matched proteins.
         """
         print("\n=== Starting epitopegen Annotation ===")
         print(f"• Method: {method}")
@@ -202,7 +282,28 @@ class EpitopeAnnotator:
         threshold: int,
         method: str
     ) -> Tuple[int, Optional[str], Optional[str]]:
-        """Find matches for a single predicted epitope."""
+        """Finds matching reference epitopes for a single predicted epitope.
+
+        Searches the reference database for matches using either Levenshtein distance
+        or substring matching.
+
+        Args:
+            pred_epitope: Predicted epitope sequence to find matches for.
+            threshold: Maximum Levenshtein distance for considering matches when using
+                'levenshtein' method.
+            method: Matching method to use, either 'levenshtein' or 'substring'.
+
+        Returns:
+            tuple: A tuple containing:
+                - int: 1 if match found, 0 otherwise
+                - Optional[str]: Matching reference epitope if found, None otherwise
+                - Optional[str]: Source protein of matching epitope if found, None otherwise
+
+        Note:
+            For 'levenshtein' method, returns first match within threshold distance.
+            For 'substring' method, returns first reference epitope containing the
+            predicted sequence.
+        """
         if not isinstance(pred_epitope, str):
             return 0, None, None
 
@@ -224,7 +325,27 @@ class EpitopeAnnotator:
         threshold: int,
         method: str
     ) -> List[Tuple[int, Optional[str], Optional[str]]]:
-        """Process predictions in parallel."""
+        """Processes multiple predictions in parallel using multiprocessing.
+
+        Applies _find_match to each prediction in the input series using a process pool
+        for parallel execution.
+
+        Args:
+            pred_column: Series of predicted epitope sequences to process.
+            threshold: Maximum Levenshtein distance for considering matches when using
+                'levenshtein' method.
+            method: Matching method to use, either 'levenshtein' or 'substring'.
+
+        Returns:
+            list[tuple]: List of tuples, each containing:
+                - int: 1 if match found, 0 otherwise
+                - Optional[str]: Matching reference epitope if found, None otherwise
+                - Optional[str]: Source protein of matching epitope if found, None otherwise
+
+        Note:
+            Uses multiprocessing.Pool with maxtasksperchild=100 to prevent memory
+            buildup during parallel processing.
+        """
         # Create a Pool with explicit start method
         with Pool(cpu_count(), maxtasksperchild=100) as pool:
             results = pool.starmap(
@@ -235,23 +356,68 @@ class EpitopeAnnotator:
 
 
 class EpitopeEnsembler:
-    """Ensemble multiple annotation results to reduce variance."""
+    """A class for ensembling multiple epitope annotation results to reduce variance.
 
+    This class provides methods for combining and analyzing results from multiple
+    model predictions through majority voting and statistical analysis.
+
+    Attributes:
+        threshold: Float threshold for majority voting (between 0 and 1).
+    """
     def __init__(self, threshold: float = 0.5):
-        """Initialize ensembler.
+        """Initializes the ensembler with specified voting threshold.
 
         Args:
-            threshold: Threshold for majority voting (default: 0.5)
+            threshold: Minimum fraction of votes needed for consensus in majority
+                voting (default: 0.5). Must be between 0 and 1.
         """
         self.threshold = threshold
 
     @staticmethod
     def _get_most_frequent(series: pd.Series) -> Any:
-        """Get most frequent non-null value in series."""
+        """Gets the most frequent non-null value in a pandas Series.
+
+        Args:
+            series: Pandas Series containing values to analyze.
+
+        Returns:
+            Any: Most frequent non-null value in the series. Returns np.nan if
+                all values are null or series is empty.
+
+        Note:
+            In case of ties, returns the first value encountered.
+        """
         return series.value_counts().index[0] if not series.isna().all() else np.nan
 
     def _calculate_ensemble_stats(self, base_df: pd.DataFrame, annotation_files: List[str], top_k: int) -> dict:
-        """Calculate comprehensive ensemble statistics."""
+        """Calculates comprehensive statistics for ensemble predictions.
+
+        Analyzes the ensemble results to generate statistics about matches,
+        match rates, and protein distributions at different k values.
+
+        Args:
+            base_df: DataFrame containing the ensemble prediction results.
+            annotation_files: List of paths to original annotation files used
+                in ensemble.
+            top_k: Number of top predictions to analyze per TCR.
+
+        Returns:
+            dict: Dictionary containing ensemble statistics:
+                - num_files: Number of annotation files used
+                - total_tcrs: Total number of TCR sequences
+                - threshold: Majority voting threshold used
+                - input_files: Names of input annotation files
+                - cumulative_matches: Dict with statistics at each k:
+                    - tcrs_matched: Number of TCRs with matches
+                    - match_rate: Percentage of TCRs with matches
+                    - top_proteins: Most common matched proteins
+                - total_matched_tcrs: Total TCRs with any matches
+                - overall_match_rate: Overall percentage of TCRs matched
+
+        Note:
+            Statistics are calculated both per-k and across all k values
+            to provide comprehensive analysis of ensemble performance.
+        """
         stats = {
             "num_files": len(annotation_files),
             "total_tcrs": len(base_df),
@@ -291,15 +457,33 @@ class EpitopeEnsembler:
         output_path: Optional[str] = None,
         top_k: Optional[int] = 32,
     ) -> pd.DataFrame:
-        """Ensemble multiple annotation results using majority voting.
+        """Combines multiple annotation results using majority voting ensemble method.
+
+        Processes multiple annotation files to create a consensus prediction through
+        majority voting at each k value. For matched sequences, determines the most
+        frequent protein and epitope annotations.
 
         Args:
-            annotation_files: List of paths to annotation CSV files
-            output_path: Path to save ensembled results
-            top_k: How many top predictions to consider (default: 32)
+            annotation_files: List of paths to annotation CSV files. Each file should
+                contain matching results from a different model checkpoint.
+            output_path: Path to save the ensembled results CSV. If None, results
+                are only returned as DataFrame.
+            top_k: Number of top predictions to consider per TCR (default: 32).
+                Each k represents a different cutoff point for analysis.
 
         Returns:
-            DataFrame with ensembled annotations
+            pd.DataFrame: DataFrame containing ensembled results with columns:
+                - Original TCR sequence columns
+                - match_{k}: Binary indicators for consensus matches at each k
+                - ref_protein_{k}: Most frequent matching protein at each k
+                - ref_epitope_{k}: Most frequent matching epitope at each k
+
+        Note:
+            - Uses the threshold specified during initialization for majority voting
+            - Prints detailed statistics about match rates and protein distributions
+              at different k values
+            - The first annotation file's structure is used as the base for the
+              ensemble results
         """
         print("\n=== Starting epitopegen Ensemble ===")
         print(f"• Processing {len(annotation_files)} annotation files")
@@ -396,19 +580,37 @@ class EpitopeEnsembler:
 
 def analyze_match_overlap(file1_path: str, file2_path: str, top_k: int = 1,
                          tcr_col: str = 'cdr3', total_population: int = None) -> dict:
-    """
-    Analyze overlap between matched TCRs in two files considering top K matches.
-    A TCR is considered matched if any of its match_0 to match_{K-1} equals 1.
+    """Analyzes the overlap between matched TCRs in two prediction result files.
+
+    Compares two sets of TCR prediction results to determine the overlap in their
+    matches, considering the top K predictions for each TCR. A TCR is considered
+    matched if any of its matches from match_0 to match_{K-1} equals 1.
 
     Args:
-        file1_path: Path to first CSV file
-        file2_path: Path to second CSV file
-        top_k: Number of top matches to consider
-        tcr_col: Name of column containing TCR sequences
-        total_population: Total size of TCR population (if None, uses length of input data)
+        file1_path: Path to first CSV file containing TCR prediction results.
+        file2_path: Path to second CSV file containing TCR prediction results.
+        top_k: Number of top predictions to consider for each TCR (default: 1).
+        tcr_col: Name of the column containing TCR sequences (default: 'cdr3').
+        total_population: Total size of TCR population for calculating expected
+            overlap. If None, uses the length of input data (default: None).
 
     Returns:
-        Dictionary containing overlap statistics
+        dict: Dictionary containing overlap statistics:
+            - file1: Name of first input file
+            - file2: Name of second input file
+            - total_tcrs: Total number of TCRs in population
+            - file1_matches: Number of matched TCRs in first file
+            - file2_matches: Number of matched TCRs in second file
+            - overlap_size: Number of TCRs matched in both files
+            - overlap_pct_file1: Percentage of file1 matches also in file2
+            - overlap_pct_file2: Percentage of file2 matches also in file1
+            - expected_overlap_pct: Expected random overlap percentage
+
+    Note:
+        - Input CSV files must contain a TCR sequence column and match_k columns
+          (match_0 through match_{K-1})
+        - Prints detailed overlap statistics to stdout
+        - Handles edge cases where no matches are found in either file
     """
     # Read CSVs and drop NA values in TCR column
     df1 = pd.read_csv(file1_path).dropna(subset=[tcr_col])
@@ -462,12 +664,25 @@ def analyze_match_overlap(file1_path: str, file2_path: str, top_k: int = 1,
     }
 
 def analyze_pair(args, top_k=1):
-    """
-    Helper function to analyze a single pair of files.
+    """Analyzes match overlap between a single pair of prediction files.
+
+    Helper function designed to work with multiprocessing, processing a pair of
+    files and calculating their overlap statistics.
 
     Args:
-        args (tuple): Tuple containing (file1_path, file2_path)
-        top_k (int): Number of top matches to consider
+        args: Tuple containing paths to two prediction files (file1_path, file2_path).
+        top_k: Number of top predictions to consider for each TCR (default: 1).
+
+    Returns:
+        Optional[Tuple[str, str, float]]: If successful, returns tuple containing:
+            - str: Filename of first file
+            - str: Filename of second file
+            - float: Average overlap percentage between the files
+        Returns None if processing fails.
+
+    Note:
+        - Uses 'tcr' as the column name for TCR sequences
+        - Prints error message to stdout if processing fails
     """
     try:
         file1_path, file2_path = args
@@ -481,14 +696,29 @@ def analyze_pair(args, top_k=1):
         return None
 
 def visualize_match_overlaps_parallel(files_list, outdir, top_k=1, n_processes=None):
-    """
-    Generate a heatmap of match overlaps between all pairs of files using multiprocessing.
+    """Generates a heatmap visualization of match overlaps between prediction files.
+
+    Creates a heatmap showing the pairwise overlap percentages between all
+    combinations of prediction files using parallel processing for efficiency.
 
     Args:
-        files_list (list): List of file paths to analyze
-        outdir (str): Output directory for saving the visualization
-        top_k (int): Number of top matches to consider (default: 1)
-        n_processes (int): Number of processes to use (default: None, uses CPU count - 1)
+        files_list: List of paths to prediction result files to analyze.
+        outdir: Directory path where the heatmap visualization will be saved.
+        top_k: Number of top predictions to consider for each TCR (default: 1).
+        n_processes: Number of parallel processes to use. If None, uses CPU count
+            minus 1 (default: None).
+
+    Returns:
+        tuple: A tuple containing:
+            - pd.DataFrame: Matrix of overlap percentages between all file pairs
+            - list[str]: List of filenames used as matrix labels
+
+    Note:
+        - Creates a heatmap visualization saved as 'match_overlap_heatmap_topK.pdf'
+        - Uses seaborn for heatmap generation with YlOrRd colormap
+        - Processes file pairs in parallel for improved performance
+        - Creates output directory if it doesn't exist
+        - Matrix is symmetric with diagonal values representing self-overlap
     """
     # Create output directory if it doesn't exist
     os.makedirs(outdir, exist_ok=True)

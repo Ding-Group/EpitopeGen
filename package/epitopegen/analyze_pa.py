@@ -10,8 +10,11 @@ from scipy.stats import fisher_exact
 
 
 class PARatioAnalyzer:
-    """Class for performing Phenotype-Association Ratio analysis."""
+    """Class for performing Phenotype-Association Ratio analysis.
 
+    This class provides functionality to analyze Phenotype-Association (PA) ratios
+    across different cell types and patterns.
+    """
     def __init__(
         self,
         cell_types: List[str],
@@ -23,12 +26,15 @@ class PARatioAnalyzer:
         """Initialize PA ratio analyzer.
 
         Args:
-            cell_types: List of cell types to analyze
-            pattern_names: List of pattern names
-            pattern_descriptions: Dictionary mapping pattern names to descriptions
-            patterns_dict: List of lists containing site patterns to analyze
-            output_dir: Directory to save results (default: "analysis/PA_ratio_analysis")
+            cell_types: List of cell types to analyze.
+            pattern_names: List of pattern names to process.
+            pattern_descriptions: Dictionary mapping pattern names to their descriptions.
+            patterns_dict: Optional list of lists containing site patterns to analyze.
+                Defaults to None.
+            output_dir: Directory path to save analysis results.
+                Defaults to "analysis/PA_ratio_analysis".
         """
+
         self.cell_types = cell_types
         self.pattern_names = pattern_names
         self.pattern_descriptions = pattern_descriptions
@@ -42,7 +48,12 @@ class PARatioAnalyzer:
         self._validate_inputs()
 
     def _validate_inputs(self):
-        """Validate input parameters."""
+        """Validate input parameters.
+
+        Raises:
+            ValueError: If any of the required input parameters (cell_types,
+                pattern_names, or pattern_descriptions) is empty.
+        """
         if not self.cell_types:
             raise ValueError("cell_types cannot be empty")
 
@@ -58,18 +69,23 @@ class PARatioAnalyzer:
         reference_data: pd.DataFrame,
         match_columns: List[str]
     ) -> Tuple[float, float, int]:
-        """
-        Calculate PA ratio and perform statistical comparison with reference data.
+        """Calculate PA ratio and perform statistical comparison with reference data.
 
         Args:
-            data: DataFrame for current pattern
-            reference_data: DataFrame for reference pattern (naive/healthy)
-            match_columns: List of match columns to consider
+            data: DataFrame containing the current pattern data.
+            reference_data: DataFrame containing the reference pattern data
+                (naive/healthy).
+            match_columns: List of column names to consider for matching.
 
         Returns:
-            ratio: PA ratio
-            p_value: p-value from Fisher's exact test
-            PA_count: Number of PA cells
+            tuple: A tuple containing:
+                - ratio (float): The calculated PA ratio
+                - p_value (float): P-value from Fisher's exact test
+                - PA_count (int): Number of PA cells
+
+        Notes:
+            If match_columns is None, defaults to ['match_0', 'match_1', ..., 'match_9'].
+            Returns (nan, nan, 0) if no matching columns are found in the data.
         """
         if match_columns is None:
             match_columns = [f'match_{i}' for i in range(10)]
@@ -107,15 +123,29 @@ class PARatioAnalyzer:
         top_k: int = 8,
         per_patient: bool = False
     ) -> Dict[str, pd.DataFrame]:
-        """Perform PA ratio analysis.
+        """Perform PA ratio analysis on gene expression data.
+
+        Analyzes Phenotype-Association ratios across different patterns and cell types,
+        calculating statistics and generating visualizations.
 
         Args:
-            mdata: Dictionary containing gene expression data
-            top_k: Number of top matches to consider
-            per_patient: Whether to perform analysis per patient
+            mdata: Dictionary containing gene expression data, with a required 'gex'
+                key containing observation data.
+            top_k: Number of top matches to consider in the analysis.
+                Defaults to 8.
+            per_patient: Whether to perform analysis separately for each patient.
+                Defaults to False.
 
         Returns:
-            Dictionary containing analysis results DataFrames
+            dict: A dictionary with keys as generation numbers (1 to top_k) and values
+                as dictionaries containing:
+                - 'ratios': DataFrame of PA ratios
+                - 'p_values': DataFrame of corrected p-values
+                - 'num_cells': DataFrame of cell counts
+
+        Notes:
+            The function performs multiple testing correction on p-values and
+            generates visualizations for each pattern group.
         """
         df = self._preprocess_data(mdata['gex'].obs)
         results = {}
@@ -152,7 +182,19 @@ class PARatioAnalyzer:
         return results
 
     def _preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Preprocess the input data."""
+        """Preprocess the input data for PA ratio analysis.
+
+        Args:
+            df: Input DataFrame containing observation data from gene expression
+                analysis.
+
+        Returns:
+            pd.DataFrame: Preprocessed DataFrame ready for PA ratio analysis.
+
+        Notes:
+            This is a placeholder method - implement actual preprocessing logic
+            based on specific requirements.
+        """
         # Implement your preprocessing logic here
         # This is a placeholder - replace with actual implementation
         return df
@@ -162,7 +204,23 @@ class PARatioAnalyzer:
         df: pd.DataFrame,
         n_gen: int
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """Calculate PA ratios and statistics."""
+        """Calculate PA ratios and statistical measures for all patterns and cell types.
+
+        Args:
+            df: Preprocessed DataFrame containing pattern and cell type information.
+            n_gen: Number of generations/matches to consider in the analysis.
+
+        Returns:
+            tuple: A tuple containing three DataFrames:
+                - ratio_df (pd.DataFrame): PA ratios for each pattern-cell type pair
+                - p_value_df (pd.DataFrame): Statistical p-values for each pair
+                - num_df (pd.DataFrame): Number of cells for each pair
+
+        Notes:
+            - The function processes each pattern-cell type combination separately
+            - Uses match columns named as 'match_0', 'match_1', etc. up to n_gen-1
+            - All resulting DataFrames have patterns as index and cell types as columns
+        """
         aggregated_data = []
         p_values = []
         num_data = []
@@ -208,7 +266,21 @@ class PARatioAnalyzer:
         self,
         p_value_df: pd.DataFrame
     ) -> pd.DataFrame:
-        """Apply multiple testing correction to p-values."""
+        """Apply FDR-BH multiple testing correction to p-values.
+
+        Args:
+            p_value_df: DataFrame containing p-values with patterns as index and
+                cell types as columns.
+
+        Returns:
+            pd.DataFrame: DataFrame with corrected p-values, maintaining the same
+                structure as input (patterns as index, cell types as columns).
+
+        Notes:
+            - Uses Benjamini-Hochberg FDR correction method
+            - Applies correction separately for each cell type
+            - Maintains original pattern and cell type ordering
+        """
         corrected_p_values = []
         for col in range(p_value_df.shape[1]):
             _, corrected, _, _ = multipletests(
@@ -230,7 +302,21 @@ class PARatioAnalyzer:
         pattern_names: List[str],
         n_gen: int
     ):
-        """Create visualizations for a pattern group."""
+        """Create visualization plots for PA ratio analysis results.
+
+        Args:
+            ratio_df: DataFrame containing PA ratios with patterns as index and
+                cell types as columns.
+            p_value_df: DataFrame containing corrected p-values with same structure
+                as ratio_df.
+            pattern_names: List of pattern names to include in visualizations.
+            n_gen: Number of generations/matches used in the analysis.
+                Used for output file naming.
+
+        Notes:
+            Saves the generated plots to the output directory with filename
+            format 'PA_ratio_k{n_gen}.pdf'.
+        """
         # Create bar plot
         self._create_pa_ratio_bar_plot(
             ratio_df,
@@ -247,9 +333,26 @@ class PARatioAnalyzer:
         output_path: Path,
         alpha: float = 0.05
     ):
+        """Create a bar plot of PA ratios with significance markers.
+
+        Args:
+            data: DataFrame containing PA ratios with patterns as index and
+                cell types as columns.
+            p_value_df: DataFrame containing p-values with same structure as data.
+            title: Title for the plot.
+            output_path: Path object specifying where to save the plot.
+            alpha: Significance threshold for marking significant results.
+                Defaults to 0.05.
+
+        Notes:
+            - Melts the input data for plotting with patterns on x-axis and
+              different cell types as grouped bars
+            - Adds significance markers (*) for results where p < alpha
+            - Customizes plot appearance including colors, labels, and legend
+            - Saves the plot to the specified output path
+        """
         pattern_names = data.index.tolist()
 
-        """Create bar plot of PA ratios with significance markers."""
         # Prepare data for plotting
         melted_data = data.reset_index().melt(
             id_vars='index',
@@ -281,7 +384,20 @@ class PARatioAnalyzer:
         self,
         melted_data: pd.DataFrame
     ) -> Tuple[plt.Figure, plt.Axes]:
-        """Set up the bar plot figure and axes."""
+        """Set up the basic figure and axes for the PA ratio bar plot.
+
+        Args:
+            melted_data: DataFrame in long format containing Pattern, Cell Type,
+                and PA Ratio columns.
+
+        Returns:
+            tuple: A tuple containing:
+                - fig (plt.Figure): The created figure object
+                - ax (plt.Axes): The axes object for plotting
+
+        Notes:
+            Creates a figure with dimensions 16x7 inches.
+        """
         fig, ax = plt.subplots(figsize=(16, 7))
         return fig, ax
 
@@ -293,7 +409,27 @@ class PARatioAnalyzer:
         p_value_df: pd.DataFrame,
         alpha: float
     ) -> Dict[str, np.ndarray]:
-        """Plot bars and add significance markers."""
+        """Plot grouped bar chart of PA ratios with significance markers.
+
+        Args:
+            ax: Matplotlib axes object to plot on.
+            melted_data: DataFrame in long format containing Pattern, Cell Type,
+                and PA Ratio columns.
+            patterns: List of pattern names to include in the plot.
+            p_value_df: DataFrame containing p-values with patterns as index and
+                cell types as columns.
+            alpha: Significance threshold for marking significant results.
+
+        Returns:
+            dict: Dictionary mapping pattern names to arrays of bar positions
+                on the x-axis.
+
+        Notes:
+            - Uses a bar width of 0.15 and gap width of 0.02 between bars
+            - Groups bars by cell type
+            - Adds black edges to bars for better visibility
+            - Skips significance markers for 'All' pattern
+        """
         bar_width = 0.15
         gap_width = 0.02
         cell_types = melted_data['Cell Type'].unique()
@@ -340,7 +476,25 @@ class PARatioAnalyzer:
         p_value_df: pd.DataFrame,
         alpha: float
     ):
-        """Add significance markers to bars."""
+        """Add significance markers above bars based on p-values.
+
+        Args:
+            ax: Matplotlib axes object to add markers to.
+            pattern: Name of the current pattern.
+            cell_types: Array of cell type names.
+            bar_positions: Array of x-axis positions for the bars.
+            pattern_data: DataFrame containing PA ratios for the current pattern.
+            p_value_df: DataFrame containing p-values with patterns as index and
+                cell types as columns.
+            alpha: Significance threshold for marking significant results.
+
+        Notes:
+            Adds markers based on p-value thresholds:
+            - '***': p < 0.001
+            - '**': p < 0.01
+            - '*': p < 0.05
+            Only adds markers for significant results (p < alpha)
+        """
         for j, cell_type in enumerate(cell_types):
             p_value = p_value_df.loc[pattern, cell_type]
 
@@ -370,7 +524,32 @@ class PARatioAnalyzer:
         patterns: List[str],
         bar_positions: Dict[str, np.ndarray]
     ):
-        """Customize bar plot appearance."""
+        """Customize the appearance of the PA ratio bar plot.
+
+        Args:
+            ax: Matplotlib axes object to customize.
+            title: Title for the plot.
+            melted_data: DataFrame in long format containing Pattern, Cell Type,
+                and PA Ratio columns.
+            patterns: List of pattern names included in the plot.
+            bar_positions: Dictionary mapping pattern names to arrays of bar positions
+                on the x-axis.
+
+        Notes:
+            Customizes the following plot elements:
+            - Adds labels and title with specified font sizes
+            - Sets x-axis ticks and rotated labels for cell types
+            - Adjusts y-axis limit to 120% of maximum PA ratio
+            - Adds legend with site patterns
+            - Includes a text box explaining significance markers
+            - Applies tight layout for better spacing
+
+        Style Details:
+            - Font size: 12 for axis labels
+            - X-tick labels: 45-degree rotation, right-aligned
+            - Legend: Positioned outside plot on the right
+            - Significance legend: Positioned at (1.05, 0.5) in axes coordinates
+        """
         # Set labels and title
         ax.set_xlabel('Cell Types', fontsize=12)
         ax.set_ylabel('PA Ratio', fontsize=12)
@@ -410,13 +589,24 @@ class PARatioAnalyzer:
         num_df: pd.DataFrame,
         n_gen: int
     ):
-        """Save analysis results to CSV files.
+        """Save PA ratio analysis results to CSV files.
 
         Args:
-            ratio_df: DataFrame containing PA ratios
-            p_value_df: DataFrame containing corrected p-values
-            num_df: DataFrame containing cell counts
-            n_gen: Number of generations used for matching
+            ratio_df: DataFrame containing PA ratios with patterns as index and
+                cell types as columns.
+            p_value_df: DataFrame containing corrected p-values with same structure
+                as ratio_df.
+            num_df: DataFrame containing cell counts with same structure as ratio_df.
+            n_gen: Number of generations/matches used in the analysis.
+
+        Notes:
+            Saves three CSV files in the output directory:
+            - PA_ratio_all_patients_k{n_gen}.csv: Contains PA ratios
+            - p_value_all_patients_k{n_gen}.csv: Contains corrected p-values
+            - num_cells_all_patients_k{n_gen}.csv: Contains cell counts
+
+            All files maintain the same structure with patterns as rows and
+            cell types as columns.
         """
         ratio_df.to_csv(self.output_dir / f'PA_ratio_all_patients_k{n_gen}.csv')
         p_value_df.to_csv(self.output_dir / f'p_value_all_patients_k{n_gen}.csv')

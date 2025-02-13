@@ -22,6 +22,17 @@ from .config import (
 )
 
 class EpitopeGenPredictor:
+    """A predictor class for generating epitopes from TCR sequences using a GPT-2 based model.
+
+    This class handles model initialization, checkpoint management, and prediction generation
+    for TCR-epitope pairs. It supports multiple checkpoints and automatic downloading of
+    model weights from Zenodo.
+
+    Attributes:
+        ZENODO_URL: URL for downloading model checkpoints.
+        DEFAULT_CHECKPOINT: Name of the default checkpoint to use.
+        AVAILABLE_CHECKPOINTS: Dictionary mapping checkpoint names to their file paths.
+    """
     ZENODO_URL = ZENODO_URL
     DEFAULT_CHECKPOINT = DEFAULT_CHECKPOINT
     AVAILABLE_CHECKPOINTS = MODEL_CHECKPOINTS
@@ -36,16 +47,24 @@ class EpitopeGenPredictor:
         batch_size: int = 32,
         cache_dir: str = None
     ):
-        """Initialize epitopegen predictor.
+        """Initializes the epitope generator predictor with specified parameters.
 
         Args:
-            checkpoint_path: Path to model checkpoint directory or checkpoint name (e.g., 'ckpt1')
-            model_path: Base model path (default: gpt2-small)
-            tokenizer_path: Path to tokenizer (default: package's built-in tokenizer)
-            device: Device to run inference on ('cuda', 'cpu', or None for auto)
-            special_token_id: Special token ID used as separator (default: 2)
-            batch_size: Batch size for inference (default: 32)
-            cache_dir: Directory to store downloaded checkpoints (default: ~/.cache/epitopegen)
+            checkpoint_path: Path to model checkpoint directory or checkpoint name (e.g., 'ckpt1').
+                If None, uses the default checkpoint 'ckpt3'.
+            model_path: Base model architecture path to use (default: "gpt2-small").
+            tokenizer_path: Path to custom tokenizer. If None, uses the package's built-in tokenizer.
+            device: Device to run inference on ('cuda', 'cpu', or None for auto-detection).
+            special_token_id: Special token ID used as separator between input and output sequences
+                (default: 2).
+            batch_size: Number of sequences to process simultaneously during inference
+                (default: 32).
+            cache_dir: Directory to store downloaded checkpoints. If None, uses
+                ~/.cache/epitopegen.
+
+        Note:
+            The model will automatically download checkpoints from Zenodo if they're not
+            found in the cache directory.
         """
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         self.special_token_id = special_token_id
@@ -80,7 +99,19 @@ class EpitopeGenPredictor:
         self.model.eval()
 
     def _download_file(self, url: str, dest_path: str):
-        """Download a file with progress bar."""
+        """Downloads a file from a URL with a progress bar.
+
+        Downloads a file using streaming to support large files while displaying
+        a progress bar using tqdm.
+
+        Args:
+            url: The URL of the file to download.
+            dest_path: The local path where the downloaded file will be saved.
+
+        Note:
+            Uses 1024 byte chunks for streaming and displays progress in
+            binary units (iB).
+        """
         response = requests.get(url, stream=True)
         total_size = int(response.headers.get('content-length', 0))
 
@@ -95,7 +126,26 @@ class EpitopeGenPredictor:
                 pbar.update(size)
 
     def _ensure_checkpoint(self, checkpoint_name: str) -> str:
-        """Ensure checkpoint is available, downloading if necessary."""
+        """Ensures the specified model checkpoint is available locally.
+
+        Checks if the checkpoint exists in the cache directory. If not, downloads
+        the checkpoint archive from Zenodo and extracts it.
+
+        Args:
+            checkpoint_name: Name of the checkpoint to ensure (e.g., 'ckpt1').
+                Must be a key in AVAILABLE_CHECKPOINTS.
+
+        Returns:
+            str: The full path to the local checkpoint file.
+
+        Raises:
+            RuntimeError: If the checkpoint file is not found after extraction.
+            KeyError: If checkpoint_name is not in AVAILABLE_CHECKPOINTS.
+
+        Note:
+            Downloads are stored in a zip file named "checkpoints.zip" in the
+            cache directory before extraction.
+        """
         checkpoint_path = os.path.join(self.cache_dir, self.AVAILABLE_CHECKPOINTS[checkpoint_name])
 
         if not os.path.exists(checkpoint_path):
@@ -118,7 +168,21 @@ class EpitopeGenPredictor:
         return checkpoint_path
 
     def _calculate_statistics(self, results_df: pd.DataFrame) -> dict:
-        """Calculate useful statistics from prediction results."""
+        """Calculates useful statistics from prediction results.
+
+        Args:
+            results_df: A pandas DataFrame containing TCR sequences and their predicted epitopes.
+                Expected to have a 'tcr' column and multiple prediction columns.
+
+        Returns:
+            dict: A dictionary containing the following statistics:
+                - num_tcrs: Total number of TCR sequences analyzed
+                - num_predictions_per_tcr: Number of predictions made per TCR
+                - avg_tcr_length: Average length of TCR sequences
+                - avg_epitope_length: Average length of predicted epitopes
+                - unique_epitopes: Number of unique epitopes predicted
+                - most_common_epitopes: Dictionary of the 5 most frequently predicted epitopes and their counts
+        """
         stats = {
             "num_tcrs": len(results_df),
             "num_predictions_per_tcr": len(results_df.columns) - 1,  # -1 for tcr column
@@ -139,16 +203,20 @@ class EpitopeGenPredictor:
         top_p: float = 0.95,
         use_attention_mask = False
     ) -> Dict[str, pd.DataFrame]:
-        """Run predictions using multiple model checkpoints.
+        """Runs predictions using multiple model checkpoints.
 
         Args:
-            tcr_sequences: List of TCR sequences
-            output_dir: Directory to save prediction results
-            models: List of checkpoint names to use (default: all available)
-            [other args same as predict()]
+            tcr_sequences: List of TCR amino acid sequences to generate predictions for.
+            output_dir: Directory path where prediction results will be saved.
+            models: List of checkpoint names to use. If None, uses all available checkpoints.
+            top_k: Number of most likely tokens to consider for sampling (default: 50).
+            temperature: Sampling temperature, higher values increase diversity (default: 0.7).
+            top_p: Nucleus sampling probability threshold (default: 0.95).
+            use_attention_mask: Whether to use attention masking during generation (default: False).
 
         Returns:
-            Dictionary mapping checkpoint names to prediction DataFrames
+            Dict[str, pd.DataFrame]: Dictionary mapping checkpoint names to prediction DataFrames.
+                Each DataFrame contains the input TCR sequences and their predicted epitopes.
         """
         models = models or list(self.AVAILABLE_CHECKPOINTS.keys())
         results = {}
@@ -180,16 +248,26 @@ class EpitopeGenPredictor:
 
     def predict(self, tcr_sequences: list, output_path: str = None, top_k: int = 50,
                 temperature: float = 0.7, top_p: float = 0.95, use_attention_mask=False) -> pd.DataFrame:
-        """Generate epitope predictions for TCR sequences.
+        """Generates epitope predictions for a list of TCR sequences.
+
+        A convenience wrapper around predict_from_df that accepts a list of TCR sequences
+        instead of a DataFrame.
 
         Args:
-            tcr_sequences: List of TCR sequences
-            temperature: Sampling temperature (default: 0.7)
-            top_k: Number of predictions per TCR (this is NOT top_k in top-k top-p sampling)
-            top_p: Top-p sampling parameter (default: 0.95)
+            tcr_sequences: List of TCR amino acid sequences to generate predictions for.
+            output_path: Path to save the prediction results CSV. If None, results are
+                only returned as DataFrame.
+            top_k: Number of epitope predictions to generate per TCR sequence (default: 50).
+                Note: This is not the top-k parameter used in top-k top-p sampling.
+            temperature: Sampling temperature for generation. Higher values increase diversity
+                (default: 0.7).
+            top_p: Nucleus sampling probability threshold (default: 0.95).
+            use_attention_mask: Whether to use attention masking during generation
+                (default: False).
 
         Returns:
-            DataFrame with TCR sequences and predicted epitopes
+            pd.DataFrame: DataFrame containing TCR sequences and their predicted epitopes.
+                Columns are ['tcr', 'pred_0', 'pred_1', ..., 'pred_{top_k-1}'].
         """
         # Prepare input data
         input_data = pd.DataFrame({
@@ -201,17 +279,30 @@ class EpitopeGenPredictor:
 
     def predict_from_df(self, df: pd.DataFrame, output_path: str = None, top_k: int = 50,
                        temperature: float = 0.7, top_p: float = 0.95, use_attention_mask=False) -> pd.DataFrame:
-        """Generate epitope predictions from DataFrame.
+        """Generates epitope predictions from a DataFrame containing TCR sequences.
+
+        Main prediction method that processes TCR sequences in batches and generates
+        multiple epitope predictions for each sequence using the loaded model.
 
         Args:
-            df: DataFrame with 'text' column containing TCR sequences
-            temperature: Sampling temperature
-            top_k: Number of predictions per TCR
-            top_p: Top-p sampling parameter
-            use_attention_mask: whether or not to use the attention mask. Default to False to align with the training time condition.
+            df: DataFrame containing TCR sequences in a 'text' column.
+            output_path: Path to save the prediction results CSV. If None, results are
+                only returned as DataFrame.
+            top_k: Number of epitope predictions to generate per TCR sequence (default: 50).
+            temperature: Sampling temperature for text generation. Higher values increase
+                diversity (default: 0.7).
+            top_p: Nucleus sampling probability threshold (default: 0.95).
+            use_attention_mask: Whether to use attention masking during generation. Defaults
+                to False to match training conditions.
 
         Returns:
-            DataFrame with predictions
+            pd.DataFrame: DataFrame containing TCR sequences and their predicted epitopes.
+                Columns are ['tcr', 'pred_0', 'pred_1', ..., 'pred_{top_k-1}'].
+
+        Note:
+            The method processes sequences in batches defined by self.batch_size and
+            prints a detailed summary of the predictions including statistics about
+            TCR lengths, epitope lengths, and most common predictions.
         """
         predictions = []
 
@@ -315,7 +406,27 @@ class EpitopeGenPredictor:
         return results_df
 
     def _trim_sequences(self, input_ids):
-        """Trim sequences to include only TCR part."""
+        """Trims input sequences to contain only the TCR part and extracts labels.
+
+        Processes tokenized sequences by finding the special token that separates TCR
+        from epitope sequences. Trims sequences to include only the TCR part (up to
+        and including the special token) and extracts the epitope labels.
+
+        Args:
+            input_ids: Tensor of tokenized sequences containing both TCR and epitope parts,
+                separated by special_token_id.
+
+        Returns:
+            tuple:
+                - torch.Tensor: Stack of trimmed sequences containing only TCR parts
+                  (including special token).
+                - list[torch.Tensor]: List of extracted epitope label sequences (everything
+                  after special token, before padding).
+
+        Note:
+            Only sequences with length <= 13 tokens are included in the output.
+            Padding tokens (0) are removed from the extracted labels.
+        """
         trimmed_ids = []
         labels = []
 
@@ -336,7 +447,21 @@ class EpitopeGenPredictor:
         return torch.stack(trimmed_ids), labels
 
     def _decode_tcr(self, input_id_tr):
-        """Decode TCR sequence from input IDs."""
+        """Decodes a tokenized TCR sequence back to amino acid sequence.
+
+        Converts a list of token IDs back to a TCR amino acid sequence, handling
+        padding tokens and removing spaces from the decoded sequence.
+
+        Args:
+            input_id_tr: List of token IDs representing a TCR sequence.
+
+        Returns:
+            str: Decoded TCR amino acid sequence with spaces removed.
+
+        Note:
+            Decoding stops at the first padding token (0) if present.
+            All spaces are removed from the final sequence.
+        """
         try:
             ind_of_0 = input_id_tr.index(0)
         except ValueError:
