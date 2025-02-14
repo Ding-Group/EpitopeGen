@@ -1,7 +1,7 @@
 Installation
 ===========
 
-You can install EpiGen using pip:
+You can install EpitopeGen using pip:
 
 .. code-block:: bash
 
@@ -11,6 +11,6 @@ Or install from source:
 
 .. code-block:: bash
 
-   git clone https://github.com/Regaler/EpiGen.git
-   cd EpiGen/package
+   git clone https://github.com/Regaler/EpitopeGen.git
+   cd EpitopeGen/package
    pip install -e .

@@ -5,10 +5,10 @@ Basic usage example:
 
 .. code-block:: python
 
-   from epitopegen import EpiGenPredictor
+   from epitopegen import EpitopeGenPredictor
 
    # Initialize predictor
-   predictor = EpiGenPredictor()
+   predictor = EpitopeGenPredictor()
 
    # Predict epitopes for TCR sequences
    tcrs = ["CASIPEGGRETQYF", "CAVRATGTASKLTF"]

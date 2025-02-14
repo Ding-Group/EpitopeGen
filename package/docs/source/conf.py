@@ -4,7 +4,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))  # Important for finding your package
 
-project = 'EpiGen'
+project = 'EpitopeGen'
 copyright = '2024, Minuk Ma'
 author = 'Minuk Ma'
 release = '0.1.0'
@@ -18,7 +18,7 @@ extensions = [
 ]
 
 # Important for GitHub Pages
-html_baseurl = 'https://regaler.github.io/EpiGen/'
+html_baseurl = 'https://regaler.github.io/EpitopeGen/'
 
 html_theme = 'sphinx_rtd_theme'  # Read the Docs theme
 html_static_path = ['_static']

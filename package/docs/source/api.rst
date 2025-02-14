@@ -3,26 +3,26 @@ API Reference
 
 Predictor
 ---------
-.. automodule:: epigen.inference
+.. automodule:: epitopegen.inference
    :members:
    :undoc-members:
    :show-inheritance:
 
 Annotator
 ---------
-.. automodule:: epigen.annotate
+.. automodule:: epitopegen.annotate
    :members:
    :undoc-members:
    :show-inheritance:
 
 Analysis Tools
 -------------
-.. automodule:: epigen.analyze_deg
+.. automodule:: epitopegen.analyze_deg
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: epigen.analyze_pa
+.. automodule:: epitopegen.analyze_pa
    :members:
    :undoc-members:
    :show-inheritance:
