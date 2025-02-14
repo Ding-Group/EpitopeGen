@@ -1,0 +1,5 @@
+package/docs/build/
+package/docs/_build/
+package/docs/__pycache__/
+package/*.pyc
+package/.DS_Store
