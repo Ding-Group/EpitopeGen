@@ -3,13 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-EpitopeGen documentation
-========================
+Welcome to EpitopeGen's Documentation
+===============================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+EpitopeGen is a deep learning model that predicts cognate epitope sequences from T-cell receptor (TCR) sequences.
 
 .. toctree::
    :maxdepth: 2
@@ -17,7 +14,7 @@ documentation for details.
 
    installation
    quickstart
-   api
+   modules
    examples
 
 Indices and tables
