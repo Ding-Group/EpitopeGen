@@ -17,5 +17,8 @@ extensions = [
     'myst_parser'              # For markdown support
 ]
 
+# Important for GitHub Pages
+html_baseurl = 'https://regaler.github.io/EpiGen/'
+
 html_theme = 'sphinx_rtd_theme'  # Read the Docs theme
 html_static_path = ['_static']
