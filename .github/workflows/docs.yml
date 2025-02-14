@@ -1,8 +1,8 @@
-name: docs
+name: documentation
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, package-restructure ]  # Include your branch
 
 jobs:
   docs:
@@ -10,16 +10,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
     - name: Install dependencies
       run: |
         pip install sphinx sphinx-rtd-theme myst-parser
+        cd package  # Change to package directory
         pip install -e .
     - name: Sphinx build
       run: |
-        cd docs
+        cd package/docs  # Adjust path based on your structure
         make html
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/build/html
+        publish_dir: package/docs/build/html  # Adjust path based on your structure
