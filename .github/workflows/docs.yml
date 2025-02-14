@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main, package-restructure ]  # Include your branch
 
+permissions:
+  contents: write  # Add this line to grant write permissions
+
 jobs:
   docs:
     runs-on: ubuntu-latest
