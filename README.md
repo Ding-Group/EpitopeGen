@@ -110,4 +110,4 @@ MIT License
 
 For questions and issues:
 - Open an issue on [GitHub](https://github.com/regaler/epitopegen/issues)
-- Contact: minukma@cs.ubc.cs
+- Contact: minukma@cs.ubc.ca
