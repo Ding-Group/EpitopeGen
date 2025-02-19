@@ -80,7 +80,8 @@ results = annotator.annotate(
 
 ## Resources
 
-- [Detailed Tutorial](https://github.com/Regaler/EpitopeGen/tutorials)
+- [Detailed Tutorial](https://github.com/Regaler/EpitopeGen/blob/main/tutorials/epitopegen_basic_usage.ipynb)
+- [API Reference](https://regaler.github.io/EpitopeGen/index.html)
 - [Model Checkpoints](https://zenodo.org/records/14853949)
 - [Reference Databases](https://zenodo.org/records/14861398)
 - [Development Resources](https://zenodo.org/records/14286754)
