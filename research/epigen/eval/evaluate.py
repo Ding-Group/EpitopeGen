@@ -1,15 +1,14 @@
 # Standard library imports
-import os
-import math
 import itertools
-import subprocess
+import math
 import multiprocessing
+import subprocess
 from collections import Counter
 from pathlib import Path
-from itertools import combinations
 
 # Third-party library imports
 import Levenshtein
+import logomaker
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
@@ -21,8 +20,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from matplotlib.collections import PolyCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy import stats
-from scipy.stats import gaussian_kde, mannwhitneyu, pearsonr
-from scipy.spatial.distance import jensenshannon
+from scipy.stats import gaussian_kde, mannwhitneyu
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import pairwise_distances
 from sklearn.preprocessing import MinMaxScaler
@@ -34,6 +32,9 @@ from umap import UMAP
 from bert_pmhc import BERT as pmhc_net
 from bert_tcr import BERT as tcr_net
 from tcr_pmhc_model import *
+from utils import load_NetMHCIIpan_train, index_to_aa, adheres_to_vocab
+
+# import scipy.stats as stats
 
 
 tcr_maxlen = 30
@@ -460,7 +461,6 @@ class AffinityEvaluator:
                 # Remove the word 'Density' and the scale information from the density plot
                 right_ax.set_xlabel('')
                 right_ax.set_xticks([])
-
                 plt.figtext(0.4, 0.85, f"Cohen's d: {cohens_d:.2f}", ha='center', va='center', fontsize=16, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
 
                 # Save the plot
@@ -520,194 +520,6 @@ class ChemicoEvaluator(Evaluator):
         self._print_summary()
         self._plot_dist(desc=f"Chem_{desc}")
         self._save(desc=f"Chem_{desc}")
-
-
-def draw_dist_Chemico(pred_chem_csv, rand_chem_csv, outdir, label_col='epitope', pred_col='pred_0'):
-    df_perfect = pd.read_csv(pred_chem_csv)
-    df_random = pd.read_csv(rand_chem_csv)
-    # Filter for unique rows based on the 'epitope' column
-    df_perfect = df_perfect.drop_duplicates(subset='epitope', keep='first')
-    df_random = df_random.drop_duplicates(subset='epitope', keep='first')
-
-    # postfixes = ['epitope', 'label']
-    postfixes = [pred_col, label_col]
-    attributes = ['mw', 'am', 'ii', 'ip', 'sec_struct', 'eps_prot']
-    attribute_map = {'mw': 'Molecular Weight', 'am': 'Aromacity', 'ii': 'Instability Index', 'ip': 'Isoelectric Point', 'sec_struct': 'Secondary Structure (sheet)', 'eps_prot': 'Extinction Coefficient'}
-
-    # Set style for all plots
-    sns.set(style="whitegrid", palette="muted", font_scale=1.2)
-
-    for attribute in attributes:
-        # Preparing data for violin plot
-        data_to_plot = []
-        labels = []
-        for postfix in postfixes:
-            col_perfect = f"{attribute}_{postfix}"
-            col_random = f"{attribute}_{postfix}"
-
-            # Append perfect predictions data
-            if col_perfect in df_perfect.columns:
-                temp_df = df_perfect[[col_perfect]].copy()
-                if postfix == 'pred_0':
-                    temp_df['Type'] = 'EpiGen'
-                elif postfix == 'epitope':
-                    temp_df['Type'] = 'Natural'
-                temp_df.rename(columns={col_perfect: 'Value'}, inplace=True)
-                data_to_plot.append(temp_df)
-
-            # Append random predictions data
-            if col_random in df_random.columns and postfix != label_col:
-                temp_df = df_random[[col_random]].copy()
-                temp_df['Type'] = 'RandGen'
-                temp_df.rename(columns={col_random: 'Value'}, inplace=True)
-                data_to_plot.append(temp_df)
-
-        final_df = pd.concat(data_to_plot, ignore_index=True)
-
-        # Create tall and skinny figure
-        plt.figure(figsize=(10, 10))
-
-        # Define the desired order - putting EpiGen and Natural together
-        plot_order = ['EpiGen', 'Natural', 'RandGen']
-
-        # Create violin plot
-        ax = sns.violinplot(x='Type', y='Value', data=final_df,
-                            palette='Set3',
-                            split=False,
-                            inner='box',
-                            linewidth=1.5,
-                            order=plot_order)
-
-        # Remove x-axis label
-        ax.set_xlabel('')  # or ax.set_xlabel(None)
-
-        # Perform statistical tests
-        def compute_statistics(group1, group2):
-            # Mann-Whitney U test
-            stat, pval = stats.mannwhitneyu(group1, group2, alternative='two-sided')
-            # Additional statistics
-            mean_diff = group1.mean() - group2.mean()
-            median_diff = group1.median() - group2.median()
-            cohen_d = (group1.mean() - group2.mean()) / np.sqrt((group1.var() + group2.var()) / 2)
-            return {
-                'pvalue': pval,
-                'mean_diff': mean_diff,
-                'median_diff': median_diff,
-                'cohen_d': cohen_d,
-                'group1_mean': group1.mean(),
-                'group2_mean': group2.mean(),
-                'group1_median': group1.median(),
-                'group2_median': group2.median(),
-                'group1_std': group1.std(),
-                'group2_std': group2.std()
-            }
-
-        # Define pairs for comparison
-        pairs = [('EpiGen', 'Natural'), ('EpiGen', 'RandGen'), ('Natural', 'RandGen')]
-
-        # Calculate statistics
-        stats_results = []
-        p_values = []
-        for pair in pairs:
-            group1_data = final_df[final_df['Type'] == pair[0]]['Value']
-            group2_data = final_df[final_df['Type'] == pair[1]]['Value']
-            stats_dict = compute_statistics(group1_data, group2_data)
-            stats_dict['comparison'] = f"{pair[0]} vs {pair[1]}"
-            stats_results.append(stats_dict)
-            p_values.append(stats_dict['pvalue'])
-
-        # Adjust p-values for multiple comparisons
-        import statsmodels
-        adjusted_p_values = statsmodels.stats.multitest.multipletests(p_values, method='bonferroni')[1]
-
-        # Add adjusted p-values to stats_results
-        for stats_dict, adj_p in zip(stats_results, adjusted_p_values):
-            stats_dict['adjusted_pvalue'] = adj_p
-
-        # Save statistics to CSV
-        stats_df = pd.DataFrame(stats_results)
-        output_dir = Path(outdir) / 'Chem'
-        stats_df.to_csv(output_dir / f'{attribute}_statistics.csv', index=False)
-
-        # Add custom statistical annotations with more information
-        def add_stat_annotations(ax, pairs, stats_results):
-            y_max = final_df['Value'].max()
-            y_min = final_df['Value'].min()
-            y_range = y_max - y_min
-
-            # Function to convert p-value to stars
-            def p_to_stars(p):
-                if p < 0.001:
-                    return '***'
-                elif p < 0.01:
-                    return '**'
-                elif p < 0.05:
-                    return '*'
-                else:
-                    return 'ns'
-
-            # Add annotations for each pair
-            for i, (pair, stats_result) in enumerate(zip(pairs, stats_results)):
-                x1 = plot_order.index(pair[0])
-                x2 = plot_order.index(pair[1])
-
-                # Calculate y position for the bar
-                y = y_max + (i + 1) * y_range * 0.1
-
-                # Draw the bracket
-                line_height = y_range * 0.05
-                plt.plot([x1, x1, x2, x2],
-                        [y, y + line_height, y + line_height, y],
-                        'k-', linewidth=1)
-
-                # Add star annotation and p-value
-                stars = p_to_stars(stats_result['adjusted_pvalue'])
-                plt.text((x1 + x2) / 2, y + line_height,
-                        f'{stars}\np={stats_result["adjusted_pvalue"]:.2e}',
-                        ha='center', va='bottom')
-
-            # Add median values on the violins
-            # for i, type_name in enumerate(plot_order):
-            #     median = final_df[final_df['Type'] == type_name]['Value'].median()
-            #     plt.text(i, y_min, f'median:\n{median:.2f}',
-            #             ha='center', va='bottom')
-
-        # Add the annotations
-        add_stat_annotations(ax, pairs, stats_results)
-
-        # Customize the plot
-        plt.ylabel(f'{attribute_map[attribute]}', fontsize=16)
-        plt.xticks(rotation=0, ha='center', fontsize=16)
-        plt.yticks(fontsize=16)
-        sns.despine(trim=True, offset=10)
-        plt.tight_layout()
-
-        # Save the plot
-        plt.savefig(output_dir / f'{attribute}_violin_distribution.pdf',
-                    format='pdf', dpi=300, bbox_inches='tight')
-        plt.close()
-
-        # Print summary to console
-        print(f"\nStatistics for {attribute}:")
-        for stats_result in stats_results:
-            print(f"\n{stats_result['comparison']}:")
-            print(f"Adjusted p-value: {stats_result['adjusted_pvalue']:.2e}")
-            print(f"Cohen's d: {stats_result['cohen_d']:.3f}")
-            print(f"Mean difference: {stats_result['mean_diff']:.3f}")
-            print(f"Median difference: {stats_result['median_diff']:.3f}")
-
-
-def blosum62_score(seq1, seq2):
-        blosum = matlist.blosum62
-        score = 0
-        for a, b in zip(seq1, seq2):
-            if (a, b) in blosum:
-                score += blosum[(a, b)]
-            elif (b, a) in blosum:
-                score += blosum[(b, a)]
-            else:
-                score += blosum[('X', 'X')]  # Handle rare cases or non-standard amino acids
-        return score
 
 
 def eval_naturalness(pred_csv, blastp_result, outdir=None, rand_csv=None, blastp_result_rand=None):
@@ -918,73 +730,6 @@ def predict_random(data_csv, outdir, use_mhc=False):
     print(f"{outdir}/rand_pred.csv was saved. ")
 
 
-def plot_length_distribution(pred_csv, outdir, k=10, show_k=False):
-    # Read the CSV file
-    df = pd.read_csv(pred_csv)
-    # Replace all NaN values with empty string
-    df = df.fillna("")
-
-    # Calculate the length of the ground truth epitopes
-    df['length_epitope'] = df['epitope'].apply(len)
-
-    # Extract description from the file name
-    desc = Path(pred_csv).stem
-
-    # Determine the number of predictions to plot
-    topk = min(len([x for x in df.columns if x.startswith('pred')]), k)
-
-    # Create separate plots for each prediction
-    for i in range(topk):
-        # Create a figure with two subplots side by side
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-
-        # Calculate lengths for current prediction
-        df[f'length_{i}'] = df[f'pred_{i}'].apply(len)
-
-        # Plot natural epitopes on the left
-        sns.histplot(df['length_epitope'],
-                    bins=range(8, 14),
-                    kde=True,
-                    color='#c1bed6',
-                    ax=ax1,
-                    label='Natural',
-                    alpha=0.7)
-        ax1.set_title('Natural Epitopes', fontsize=14)
-
-        # Plot generated epitopes on the right
-        sns.histplot(df[f'length_{i}'],
-                    # bins=range(8, 14),
-                    bins=range(min(df[f'length_{i}']), max(df[f'length_{i}']) + 2),
-                    kde=False,
-                    color='#7eb4db',
-                    ax=ax2,
-                    label='EpiGen',
-                    alpha=0.7)
-        ax2.set_title('Generated Epitopes', fontsize=14)
-
-        # Set labels and ticks for both subplots
-        for ax in [ax1, ax2]:
-            ax.set_xlabel('Peptide Length', fontsize=12)
-            ax.set_ylabel('Frequency', fontsize=12)
-            ax.tick_params(labelsize=10)
-
-        # Set overall title
-        if show_k:
-            plt.suptitle(f'Epitope Length Distribution (top {i+1})', fontsize=16)
-        else:
-            plt.suptitle(f'Epitope Length Distribution', fontsize=16)
-
-        # Adjust layout
-        plt.tight_layout()
-
-        # Save each plot
-        Path(outdir).mkdir(parents=True, exist_ok=True)
-        plt.savefig(f"{outdir}/length_distribution_{desc}_top{i+1}.pdf",
-                   format='pdf',
-                   bbox_inches='tight')
-        plt.close()
-
-
 # Function to read the GLIPH2 convergence groups
 def read_gliph_convergence(filepath, group_size_th=3):
     with open(filepath, 'r') as file:
@@ -999,15 +744,15 @@ def read_gliph_convergence(filepath, group_size_th=3):
             groups[group_key] = tcrs[0].split(" ")
     return groups
 
-def blosum62_score(pair):
-    a, b = pair
-    return blosum62.get((a, b), blosum62.get((b, a), -4))
-
-def sequence_distance(seq_pair):
-    seq1, seq2 = seq_pair
-    return sum(blosum62_score((a, b)) for a, b in zip(seq1, seq2))
-
 def pairwise_blosum62_distance(peptides, n_proc=1):
+    def blosum62_score(pair):
+        a, b = pair
+        return blosum62.get((a, b), blosum62.get((b, a), -4))
+
+    def sequence_distance(seq_pair):
+        seq1, seq2 = seq_pair
+        return sum(blosum62_score((a, b)) for a, b in zip(seq1, seq2))
+
     global blosum62
     blosum62 = substitution_matrices.load('BLOSUM62')
 
@@ -1075,7 +820,7 @@ def visualize_peptides_for_TCR_groups(gliph_convergence, data, outdir, col, feat
     dists_normalized = scaler.fit_transform(dists)
     umap = UMAP(metric='precomputed')  # Use precomputed metric since we're using distances
     peptide_2d = umap.fit_transform(dists_normalized)
-    color = 'red'
+    color = 'purple'
     # Define the base size multiplier
     base_size = 10  # This will be multiplied by the number of TCRs
 
@@ -1110,7 +855,7 @@ def visualize_peptides_for_TCR_groups(gliph_convergence, data, outdir, col, feat
 
         # Plot background dots
         ax.scatter(peptide_2d[:, 0], peptide_2d[:, 1],
-                  color='gray', s=20, alpha=0.5, label='All peptides')
+                  color='lightgray', s=20, alpha=0.5, label='All peptides')
 
         # Highlight cognate partner antigens
         group_peptides = [pep for pep in peptides if any(tcr in peptide_to_tcrs[pep] for tcr in tcrs)]
@@ -1147,7 +892,7 @@ def visualize_peptides_for_TCR_groups(gliph_convergence, data, outdir, col, feat
         # Now plot for the combined figure
         ax_combined = axes_combined[i]
         ax_combined.scatter(peptide_2d[:, 0], peptide_2d[:, 1],
-                           color='gray', s=20, alpha=0.5, label='All peptides')
+                           color='lightgray', s=20, alpha=0.5, label='All peptides')
         ax_combined.scatter(peptide_2d[indices, 0], peptide_2d[indices, 1],
                            color=color, s=sizes, alpha=0.7,
                            label=f'Group {group}')
@@ -1174,109 +919,25 @@ def visualize_peptides_for_TCR_groups(gliph_convergence, data, outdir, col, feat
     print(f"All individual figures and the combined figure have been saved in {outdir}")
 
 
-# Define a fixed order for amino acids
-fixed_amino_acid_order = list('ACDEFGHIKLMNPQRSTVWY')
-
-
-def draw_amino_acid_hist(pred_csv, outdir, topk=10, num_cols=2, show_k=False):
-    # Read the CSV file
-    df = pd.read_csv(pred_csv)
-
-    # Extract description from the file name
-    desc = Path(pred_csv).stem
-
-    # Determine the number of top-k predictions to consider
-    num_topk_preds = min(len([col for col in df.columns if col.startswith('pred_')]), topk)
-    num_rows = math.ceil((num_topk_preds + 1) / num_cols)
-
-    # Initialize the plot with subplots
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 10, num_rows * 6), constrained_layout=True)
-    axes = axes.flatten()
-
-    # Function to get amino acid counts
-    def get_aa_counts(sequences):
-        aa_counts = Counter(''.join(sequences.dropna().tolist()))
-        aa_df = pd.DataFrame.from_dict(aa_counts, orient='index', columns=['Count']).reset_index()
-        aa_df.columns = ['Amino Acid', 'Count']
-        return aa_df.set_index('Amino Acid').reindex(fixed_amino_acid_order).reset_index().fillna(0)
-
-    # Get natural epitope counts
-    natural_aa_df = get_aa_counts(df['epitope'])
-
-    # Plot amino acid usage for each prediction column
-    for k in range(num_topk_preds):
-        ax = axes[k]
-        generated_aa_df = get_aa_counts(df[f'pred_{k}'])
-
-        x = np.arange(len(fixed_amino_acid_order))
-
-        # Calculate metrics
-        # For JSD: Convert counts to probabilities
-        natural_probs = natural_aa_df['Count'] / natural_aa_df['Count'].sum()
-        generated_probs = generated_aa_df['Count'] / generated_aa_df['Count'].sum()
-
-        # Calculate Jensen-Shannon Divergence
-        jsd = jensenshannon(natural_probs, generated_probs)
-
-        # Calculate Pearson Correlation
-        correlation, p_value = pearsonr(natural_aa_df['Count'], generated_aa_df['Count'])
-
-        # Save metrics to file
-        os.makedirs(outdir, exist_ok=True)
-        with open(os.path.join(outdir, f'distribution_metrics_top{k+1}.txt'), 'w') as f:
-            f.write(f"Jensen-Shannon Divergence: {jsd:.6f}\n")
-            f.write(f"Pearson Correlation Coefficient: {correlation:.6f}\n")
-            f.write(f"Correlation P-value: {p_value:.6f}\n")
-
-        # Plot natural epitopes (slightly to the left)
-        ax.bar(x - 0.2, natural_aa_df['Count'],
-               width=0.4, color='purple', alpha=0.7, label='Natural')
-
-        # Plot generated epitopes (slightly to the right)
-        ax.bar(x + 0.2, generated_aa_df['Count'],
-               width=0.4, color='blue', alpha=0.7, label='EpiGen')
-
-        if show_k:
-            ax.set_title(f'Amino Acid Usage (top {k+1})')
-        else:
-            ax.set_title(f'Amino Acid Usage')
-        ax.set_xlabel('Amino Acid')
-        ax.set_ylabel('Count')
-        ax.legend()
-
-        # Set x-axis ticks and labels
-        ax.set_xticks(x)
-        ax.set_xticklabels(fixed_amino_acid_order)
-
-    # Remove any empty subplots
-    for ax in axes[num_topk_preds:]:
-        ax.remove()
-
-    # Overall title
-    # plt.suptitle('Amino Acid Usage in Natural and Generated Epitopes', fontsize=16)
-
-    # Save the plot
-    Path(outdir).mkdir(parents=True, exist_ok=True)
-    plt.savefig(f"{outdir}/amino_acid_usage_{desc}.pdf", format='pdf')
-    plt.close()
-
-
 def calculate_diversity_metrics(epitopes):
     epitope_counts = Counter(epitopes)
     N = len(epitopes)
     p = np.array(list(epitope_counts.values())) / N
 
-    # Shannon Diversity Index
-    Shannon = -np.sum(p * np.log(p))
+    # Shannon Diversity (exp of entropy)
+    epsilon = 1e-10
+    Shannon_entropy = -np.sum(p * np.log(p + epsilon))
+    Shannon_diversity = np.exp(Shannon_entropy)
 
     # Simpson's Diversity Index
     Simpson = 1 - np.sum(p ** 2)
 
     # Renyi Diversity Index (example for alpha = 2)
     alpha = 2
-    Renyi = (1 / (1 - alpha)) * np.log(np.sum(p ** alpha))
+    Renyi_entropy = (1 / (1 - alpha)) * np.log(np.sum(p ** alpha))
+    Renyi_diversity = np.exp(Renyi_entropy)
 
-    return Shannon, Simpson, Renyi
+    return Shannon_diversity, Simpson, Renyi_diversity
 
 def rarefaction(epitopes, sample_size, iterations=1000):
     rarefied_metrics = []
@@ -1288,19 +949,19 @@ def rarefaction(epitopes, sample_size, iterations=1000):
     # Average the metrics across all iterations
     rarefied_metrics = np.array(rarefied_metrics)
     mean_metrics = np.mean(rarefied_metrics, axis=0)
-    return mean_metrics
+    return mean_metrics, rarefied_metrics
 
 
-def measure_epitope_div(model_name, pred_csvs, datasets, outdir, sample_size=12000):
+def measure_epitope_div(model_names, pred_csvs, datasets, outdir, sample_size=12000):
     # Created in 2024-10-25
     metrics_dict = {'Metric': [], 'Value': [], 'Dataset': []}
-    for pred_csv, dataset in zip(pred_csvs, datasets):
+    for model_name, pred_csv, dataset in zip(model_names, pred_csvs, datasets):
         df = pd.read_csv(pred_csv)
         epitopes = df['pred_0'].tolist()
 
         # Basic diversity metrics
         pep2tcr_ratio = len(set(epitopes)) / len(epitopes)
-        mean_metrics = rarefaction(epitopes, sample_size)
+        mean_metrics, rarefied_metrics = rarefaction(epitopes, sample_size)
         metrics_dict['Metric'].extend(['Shannon', 'Simpson', 'Renyi', 'pep2tcr_ratio'])
         metrics_dict['Value'].extend(mean_metrics)
         metrics_dict['Value'].append(pep2tcr_ratio)
@@ -1332,114 +993,13 @@ def measure_epitope_div(model_name, pred_csvs, datasets, outdir, sample_size=120
         metrics_dict['Value'].append(top_10_concentration)
         metrics_dict['Dataset'].append(dataset)
 
-    # Create a DataFrame from the metrics and save it
-    result = pd.DataFrame(metrics_dict)
-    Path(outdir).mkdir(parents=True, exist_ok=True)
-    result.to_csv(f"{outdir}/diversity_{model_name}.csv", index=False)
-    print(f"{outdir}/diversity_{model_name}.csv")
-    return result
+        # Create a DataFrame from the metrics and save it
+        result = pd.DataFrame(metrics_dict)
+        Path(outdir).mkdir(parents=True, exist_ok=True)
+        result.to_csv(f"{outdir}/diversity_{model_name}.csv", index=False)
+        print(f"{outdir}/diversity_{model_name}.csv")
 
-
-def plot_epitope_div(outdir, div_files, descs):
-    # Created in 2024-10-25
-    # Visualize Renyi, Simpson, Gini, Shannon, etc. for each model (method) in 3x2 subplots
-    data = []
-    for div_file, desc in zip(div_files, descs):
-        df = pd.read_csv(div_file)
-        df['Model'] = desc
-        data.append(df)
-
-    # Concatenate all dataframes
-    df = pd.concat(data)
-
-    # Pivot the data for plotting
-    data_table = df.pivot_table(values='Value', index='Metric', columns='Model', aggfunc='mean')
-
-    # Reorder columns of data_table to match the order in descs
-    data_table = data_table[descs]
-
-    # Set up 3x2 grid for subplots
-    fig, axs = plt.subplots(3, 2, figsize=(14, 10))
-    axs = axs.flatten()  # Flatten for easy indexing
-    colors = plt.get_cmap('viridis', len(descs)).colors
-
-    # Iterate over each metric and plot in a separate subplot
-    for i, metric in enumerate(data_table.index):
-        ax = axs[i]
-        bar_width = 0.25
-        bar_positions = np.arange(len(descs))
-
-        # Plot bars for each model
-        for j, model in enumerate(data_table.columns):
-            ax.bar(bar_positions[j] + (j * bar_width), data_table.loc[metric, model],
-                   color=colors[j], width=bar_width, label=model if i == 0 else "")
-
-        # Customize each subplot
-        ax.set_title(metric, fontweight='bold')
-        ax.set_xticks([])  # Remove x-ticks
-        ax.set_xlabel('')   # Remove x-axis label
-
-    # Adjust layout and add a legend
-    fig.tight_layout(rect=[0, 0, 0.85, 1])
-    fig.legend(labels=data_table.columns, loc='upper right', bbox_to_anchor=(1.15, 0.9), title='Model')
-
-    # Save the figure
-    filename = 'diversity_subplots.pdf'
-    plt.savefig(f"{outdir}/{filename}", dpi=300, format='pdf', bbox_inches='tight')
-    print(f"{outdir}/{filename}")
-    plt.close()
-
-
-def plot_epitope_div_simple(outdir, div_files, descs):
-    """
-    Create a single plot comparing Renyi, Shannon, Simpson, and pep2tcr_ratio metrics
-    across different models with side-by-side bars.
-    """
-    # Read and combine data
-    data = []
-    for div_file, desc in zip(div_files, descs):
-        df = pd.read_csv(div_file)
-        df['Model'] = desc
-        data.append(df)
-    df = pd.concat(data)
-
-    # Filter only the metrics we want
-    metrics_to_plot = ['Renyi', 'Shannon', 'Simpson', 'pep2tcr_ratio']
-    df = df[df['Metric'].isin(metrics_to_plot)]
-
-    # Create the plot
-    plt.figure(figsize=(10, 10))
-
-    # Setup bar positions
-    n_models = len(descs)
-    bar_width = 0.8 / n_models  # Divide available space by number of models
-    metric_positions = np.arange(len(metrics_to_plot))
-
-    # Plot bars for each model
-    for i, model in enumerate(descs):
-        model_data = df[df['Model'] == model]
-        model_values = []
-        for metric in metrics_to_plot:
-            value = model_data[model_data['Metric'] == metric]['Value'].values
-            model_values.append(value[0] if len(value) > 0 else 0)
-
-        position = metric_positions + (i * bar_width) - (bar_width * (n_models-1)/2)
-        plt.bar(position, model_values, bar_width, label=model)
-
-    # Customize the plot
-    plt.xlabel('Metrics')
-    plt.ylabel('Value')
-    plt.title('Diversity Metrics Comparison')
-    plt.xticks(metric_positions, metrics_to_plot)
-    plt.legend(loc='upper right')
-
-    # Save the plot
-    plt.tight_layout()
-    filename = 'diversity_comparison.pdf'
-    plt.savefig(f"{outdir}/{filename}", dpi=300, format='pdf', bbox_inches='tight')
-    print(f"{outdir}/{filename}")
-    plt.close()
-
+        metrics_dict = {'Metric': [], 'Value': [], 'Dataset': []}
 
 def measure_generation_redundancy(pred_csvs, descs, outdir):
     def _measure(df, idx):

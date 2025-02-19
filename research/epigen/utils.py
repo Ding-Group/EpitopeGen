@@ -621,3 +621,115 @@ def check_dataset_overlap(query, reference):
     }
     print(stats)
     return df_q, stats
+
+
+def construct_epitope_db(IEDB_db_path, outdir, desc,
+                         expand_peptides=True, target_length=10, max_length_cutoff=None):
+    """
+    Construct an epitope database from IEDB raw data
+    remove redundancies, and sort by protein frequency.
+
+    Parameters:
+    IEDB_db_path (str): Path to the IEDB raw data CSV file.
+    outdir (str): Directory to save the output files.
+    desc (str): Description for the output file name (default: "covid19_associated_epitopes").
+
+    Returns:
+    pd.DataFrame: The final processed DataFrame.
+    """
+    # Step 1: Construct the epitope database from IEDB raw data
+    df_iedb = pd.read_csv(IEDB_db_path)
+    df_iedb = df_iedb.rename(columns={'Epitope - Name': 'peptide', 'Epitope - Source Molecule': 'protein'})
+    # df = df[df['peptide'].apply(lambda x: is_valid_peptide(x))]
+    df_iedb = df_iedb[['peptide', 'protein']]
+
+    # Step 3: Append MIRA entries to the IEDB DataFrame
+    df_combined = df_iedb
+
+    # Step 4: Strip double quotes from the 'protein' column
+    df_combined['protein'] = df_combined['protein'].str.strip('"')
+
+    # Step 5: Remove redundant peptides
+    df_combined = df_combined.drop_duplicates(subset=['peptide'], keep='first')
+
+    # Step 6: Standardize protein names
+    # df_combined['protein_standardized'] = df_combined['protein'].apply(standardize_protein_name)
+
+    # Step 7: Calculate protein frequencies and sort by frequency (ascending)
+    protein_freq_map = df_combined['protein'].value_counts().to_dict()
+    df_combined['protein_frequency'] = df_combined['protein'].map(protein_freq_map)
+    df_sorted = df_combined.sort_values('protein_frequency', ascending=True)
+
+    # Step 8: Save the final output to a CSV file
+    output_file = f"{outdir}/{desc}_sorted.csv"
+    df_sorted.to_csv(output_file, index=False)
+    print(f"Final database saved as: {output_file}")
+
+    # Step 10: Optionally expand peptides using a sliding window
+    if expand_peptides:
+        df_expanded = expand_peptides_sliding_window(output_file, outdir, target_length, max_length_cutoff)
+        output_file = f'{outdir}/{desc}_sorted_expanded.csv'
+        df_expanded.to_csv(output_file, index=False)
+        print(f"Expanded final database saved as: {output_file}")
+        return df_expanded
+    else:
+        return df_sorted
+
+    return df_sorted
+
+def expand_peptides_sliding_window(input_csv, outdir, target_length=10, max_length_cutoff=None):
+    """
+    Reads a CSV file containing peptide sequences, expands sequences longer than the target length
+    into multiple sequences using a sliding window approach.
+
+    Args:
+        input_csv (str): Path to input CSV file
+        outdir (str): Directory to save the output CSV
+        target_length (int): Desired length for peptide sequences (default: 10)
+        max_length_cutoff (int): Optional maximum length cutoff. Peptides longer than this will be expanded.
+                                If None, will use target_length as cutoff.
+    """
+    # Set max_length_cutoff to target_length if not specified
+    if max_length_cutoff is None:
+        max_length_cutoff = target_length
+
+    # Input validation
+    if target_length <= 0:
+        raise ValueError("target_length must be positive")
+    if max_length_cutoff < target_length:
+        raise ValueError("max_length_cutoff must be greater than or equal to target_length")
+
+    # Read the CSV file
+    df = pd.read_csv(input_csv)
+
+    # Initialize list to store new rows
+    expanded_rows = []
+
+    # Process each row
+    for _, row in df.iterrows():
+        peptide = row['peptide']
+        protein = row['protein']
+
+        # If peptide length is <= max_length_cutoff, keep as is
+        if len(peptide) <= max_length_cutoff:
+            expanded_rows.append({'peptide': peptide, 'protein': protein})
+        else:
+            # Create sliding windows of target_length
+            for i in range(len(peptide) - target_length + 1):
+                peptide_window = peptide[i:i+target_length]
+                expanded_rows.append({'peptide': peptide_window, 'protein': protein})
+
+    # Create new DataFrame from expanded rows
+    df_expanded = pd.DataFrame(expanded_rows)
+
+    # Create output directory if it doesn't exist
+    # os.makedirs(outdir, exist_ok=True)
+
+    # Generate output filename based on parameters
+    # output_filename = f'expanded_length_{target_length}.csv'
+    # output_path = os.path.join(outdir, output_filename)
+
+    # Save to CSV
+    # df_expanded.to_csv(output_path, index=False, quoting=csv.QUOTE_MINIMAL)
+
+    return df_expanded
