@@ -9,7 +9,7 @@ TOKENIZER_PATH = RESOURCES_PATH / "tokenizer"
 
 # Model configuration
 DEFAULT_CACHE_DIR = os.path.expanduser("./.cache/epitopegen")
-ZENODO_URL = "https://zenodo.org/records/14853949/files/250211_checkpoints.zip"
+ZENODO_URL = "https://zenodo.org/records/14890420/files/250218_checkpoints.zip"
 MODEL_CHECKPOINTS = {
     "ckpt1": "checkpoints/epitopegen_weight_1/epoch_28/pytorch_model.bin",
     "ckpt2": "checkpoints/epitopegen_weight_2/epoch_26/pytorch_model.bin",

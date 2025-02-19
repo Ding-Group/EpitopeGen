@@ -562,8 +562,8 @@ class PARatioAnalyzer:
         ax.set_xticklabels(cell_types, rotation=45, ha='right')
 
         # Set y-axis limit
-        max_ratio = np.ceil(melted_data['PA Ratio'].max() * 10) / 10
-        ax.set_ylim(0, max_ratio * 1.2)
+        max_ratio = melted_data['PA Ratio'].max()
+        ax.set_ylim(0, max_ratio * 1.15)
 
         # Add legend
         ax.legend(

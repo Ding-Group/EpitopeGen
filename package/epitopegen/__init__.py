@@ -15,6 +15,9 @@ from .config import (
 )
 from .analyze_deg import DEGAnalyzer
 from .analyze_pa import PARatioAnalyzer
+from .analyze_pre import PRERatioAnalyzer
+from .analyze_ce import TCRUMAPVisualizer
+from .analyze_antigen import AntigenAnalyzer,CoronavirusProteinStandardizer
 
 __version__ = "0.1.0"
 
@@ -27,5 +30,6 @@ __all__ = [
     "MODEL_CHECKPOINTS",
     "ZENODO_URL",
     "DEGAnalyzer",
-    "PARatioAnalyzer"
+    "PARatioAnalyzer",
+    "PRERatioAnalyzer"
 ]

@@ -396,10 +396,12 @@ class DEGAnalyzer:
         # Create and customize heatmap
         plt.figure(figsize=(12, len(all_genes) * 0.4 + 1))
         sns.heatmap(heatmap_data,
-                    annot=True,
-                    fmt=".2f",
-                    cmap="RdBu_r",
+                    annot=True,     # Show values in cells
+                    fmt=".2f",      # Format for cell values
+                    cmap="RdBu_r",  # Color map (red-blue)
                     center=0,
+                    vmin=-2,        # Clip minimum value for color scaling
+                    vmax=2,         # Clip maximum value for color scaling
                     xticklabels=pattern_names_with_stats,
                     yticklabels=all_genes,
                     cbar_kws={'label': 'Log2 Fold Change (PA/NA)'})
