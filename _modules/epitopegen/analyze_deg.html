@@ -1,0 +1,821 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>epitopegen.analyze_deg &mdash; EpitopeGen 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://ding-group.github.io/EpitopeGen/_modules/epitopegen/analyze_deg.html" />
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EpitopeGen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EpitopeGen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">epitopegen.analyze_deg</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for epitopegen.analyze_deg</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scanpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">GENES_OF_INTEREST</span><span class="p">,</span><span class="n">GENE_GROUPS</span>
+
+<div class="viewcode-block" id="DEGAnalyzer"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_deg.DEGAnalyzer">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">DEGAnalyzer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class for performing differential expression gene analysis between PA and NA cells.</span>
+
+<span class="sd">    Analyzes differential gene expression between phenotype-associated (PA) and</span>
+<span class="sd">    not-associated (NA) cells, with support for custom gene groups and site patterns.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        genes_of_interest: List of genes to analyze.</span>
+<span class="sd">        gene_groups: Dictionary mapping group names to lists of genes.</span>
+<span class="sd">        patterns_list: List of lists containing site patterns to analyze.</span>
+<span class="sd">        pattern_names: Names corresponding to site patterns.</span>
+<span class="sd">        output_dir: Path object for the results directory.</span>
+<span class="sd">        top_k: Number of top matches to consider for PA cells.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">genes_of_interest</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">GENES_OF_INTEREST</span><span class="p">,</span>
+        <span class="n">gene_groups</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="n">GENE_GROUPS</span><span class="p">,</span>
+        <span class="n">patterns_list</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">pattern_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;results&quot;</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the DEG analyzer with specified parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            genes_of_interest: List of genes to analyze in the differential</span>
+<span class="sd">                expression analysis.</span>
+<span class="sd">            gene_groups: Dictionary mapping group names to lists of genes for</span>
+<span class="sd">                grouped analysis.</span>
+<span class="sd">            patterns_list: List of lists containing site patterns to analyze.</span>
+<span class="sd">                Optional for pattern-specific analysis.</span>
+<span class="sd">            pattern_names: Names corresponding to site patterns. Required if</span>
+<span class="sd">                patterns_list is provided.</span>
+<span class="sd">            output_dir: Directory path to save analysis results (default: &quot;results&quot;).</span>
+<span class="sd">            top_k: Number of top matches to consider for PA cells (default: 1).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If input parameters are invalid or inconsistent.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">genes_of_interest</span> <span class="o">=</span> <span class="n">genes_of_interest</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gene_groups</span> <span class="o">=</span> <span class="n">gene_groups</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patterns_list</span> <span class="o">=</span> <span class="n">patterns_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span> <span class="o">=</span> <span class="n">pattern_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">top_k</span> <span class="o">=</span> <span class="n">top_k</span>
+
+        <span class="c1"># Create output directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Validate inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_inputs</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates the initialization input parameters.</span>
+
+<span class="sd">        Checks for:</span>
+<span class="sd">            - Non-empty genes_of_interest list</span>
+<span class="sd">            - Non-empty gene_groups dictionary</span>
+<span class="sd">            - Matching lengths of patterns_list and pattern_names if provided</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If any validation check fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">genes_of_interest</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;genes_of_interest cannot be empty&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene_groups</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;gene_groups cannot be empty&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">patterns_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;pattern_names must be provided when patterns_list is specified&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">patterns_list</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Length of patterns_list must match pattern_names&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DEGAnalyzer.prepare_data"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_deg.DEGAnalyzer.prepare_data">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocesses the input gene expression data.</span>
+
+<span class="sd">        Performs standard single-cell preprocessing steps including total count</span>
+<span class="sd">        normalization and log transformation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing gene expression data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            sc.AnnData: Preprocessed copy of the input data with:</span>
+<span class="sd">                - Total counts normalized to 1e4</span>
+<span class="sd">                - Log1p transformed expression values</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Creates a copy of the input data to preserve the original.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">normalize_total</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">target_sum</span><span class="o">=</span><span class="mf">1e4</span><span class="p">)</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">pp</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">adata</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_pa_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a boolean mask identifying phenotype-associated (PA) cells.</span>
+
+<span class="sd">        Identifies PA cells by checking match columns up to top_k, where a cell</span>
+<span class="sd">        is considered PA if it has a match in any of the considered positions.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing match information in obs columns</span>
+<span class="sd">                (match_0 through match_{top_k-1}).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series: Boolean mask with True for PA cells and False for NA cells,</span>
+<span class="sd">                indexed by cell names.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Looks for match columns named &#39;match_0&#39; through &#39;match_{top_k-1}&#39;</span>
+<span class="sd">            in adata.obs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pa_mask</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="p">):</span>
+            <span class="n">match_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="k">if</span> <span class="n">match_col</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">pa_mask</span> <span class="o">|=</span> <span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">match_col</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pa_mask</span>
+
+<div class="viewcode-block" id="DEGAnalyzer.perform_deg_analysis"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_deg.DEGAnalyzer.perform_deg_analysis">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">perform_deg_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs differential expression analysis between PA and NA cells.</span>
+
+<span class="sd">        Conducts Wilcoxon rank-sum test to identify differentially expressed genes</span>
+<span class="sd">        between phenotype-associated (PA) and non-associated (NA) cells.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing gene expression data and match information</span>
+<span class="sd">                in obs columns.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing:</span>
+<span class="sd">                - dict: Results dictionary mapping each gene to its statistics:</span>
+<span class="sd">                    - logfoldchange: Log fold change between PA and NA cells</span>
+<span class="sd">                    - pval: Raw p-value from Wilcoxon test</span>
+<span class="sd">                    - pval_adj: Adjusted p-value for multiple testing</span>
+<span class="sd">                    - pct_pa: Percentage of PA cells expressing the gene</span>
+<span class="sd">                    - pct_na: Percentage of NA cells expressing the gene</span>
+<span class="sd">                - int: Number of PA cells identified</span>
+<span class="sd">                - int: Total number of cells analyzed</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Uses scanpy&#39;s rank_genes_groups with Wilcoxon test</span>
+<span class="sd">            - Returns empty results with appropriate structure if analysis fails</span>
+<span class="sd">            - Handles missing genes and failed computations gracefully</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize groups</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;comparison_group&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NA&#39;</span>
+        <span class="n">pa_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_pa_mask</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">pa_mask</span><span class="p">,</span> <span class="s1">&#39;comparison_group&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PA&#39;</span>
+
+        <span class="c1"># Calculate statistics</span>
+        <span class="n">n_pa</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;comparison_group&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PA&#39;</span><span class="p">)</span>
+        <span class="n">n_total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PA cells (top </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2"> matches): </span><span class="si">{</span><span class="n">n_pa</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">n_pa</span><span class="o">/</span><span class="n">n_total</span><span class="o">*</span><span class="mi">100</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%) out of </span><span class="si">{</span><span class="n">n_total</span><span class="si">}</span><span class="s2"> total cells&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Perform DEG analysis</span>
+            <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span>
+                <span class="n">adata</span><span class="p">,</span>
+                <span class="n">groupby</span><span class="o">=</span><span class="s1">&#39;comparison_group&#39;</span><span class="p">,</span>
+                <span class="n">groups</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PA&#39;</span><span class="p">],</span>
+                <span class="n">reference</span><span class="o">=</span><span class="s1">&#39;NA&#39;</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;wilcoxon&#39;</span><span class="p">,</span>
+                <span class="n">pts</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Extract results using the correct API</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">de_results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                    <span class="p">{</span><span class="n">group</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">key</span><span class="p">:</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">&#39;rank_genes_groups&#39;</span><span class="p">][</span><span class="n">key</span><span class="p">][</span><span class="n">group</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;PA&#39;</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;names&#39;</span><span class="p">,</span> <span class="s1">&#39;logfoldchanges&#39;</span><span class="p">,</span> <span class="s1">&#39;pvals&#39;</span><span class="p">,</span> <span class="s1">&#39;pvals_adj&#39;</span><span class="p">,</span> <span class="s1">&#39;pts&#39;</span><span class="p">]})</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not get rank genes groups results: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">de_results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>  <span class="c1"># Empty DataFrame as fallback</span>
+
+            <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">genes_of_interest</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="p">:</span>
+                        <span class="n">gene_results</span> <span class="o">=</span> <span class="n">de_results</span><span class="p">[</span><span class="n">de_results</span><span class="p">[</span><span class="s1">&#39;PA_names&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">gene</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_results</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                                <span class="s1">&#39;logfoldchange&#39;</span><span class="p">:</span> <span class="n">gene_results</span><span class="p">[</span><span class="s1">&#39;PA_logfoldchanges&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="s1">&#39;pval&#39;</span><span class="p">:</span> <span class="n">gene_results</span><span class="p">[</span><span class="s1">&#39;PA_pvals&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="s1">&#39;pval_adj&#39;</span><span class="p">:</span> <span class="n">gene_results</span><span class="p">[</span><span class="s1">&#39;PA_pvals_adj&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="s1">&#39;pct_pa&#39;</span><span class="p">:</span> <span class="n">gene_results</span><span class="p">[</span><span class="s1">&#39;PA_pts&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;PA_pts&#39;</span> <span class="ow">in</span> <span class="n">gene_results</span><span class="o">.</span><span class="n">columns</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                                <span class="s1">&#39;pct_na&#39;</span><span class="p">:</span> <span class="kc">None</span>  <span class="c1"># This would need additional calculation if needed</span>
+                            <span class="p">}</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No results found for gene </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_result</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Gene </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2"> not found in the dataset&quot;</span><span class="p">)</span>
+                        <span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_result</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Error processing gene </span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_result</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">n_pa</span><span class="p">,</span> <span class="n">n_total</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in differential expression analysis: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_empty_result</span><span class="p">()</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">genes_of_interest</span><span class="p">},</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_empty_result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates an empty result dictionary for missing or failed gene analyses.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dictionary with empty/null values for all result fields:</span>
+<span class="sd">                - logfoldchange: np.nan</span>
+<span class="sd">                - pval: np.nan</span>
+<span class="sd">                - pval_adj: np.nan</span>
+<span class="sd">                - pct_pa: None</span>
+<span class="sd">                - pct_na: None</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Used as a fallback when gene analysis fails or gene is not found</span>
+<span class="sd">            in the dataset.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;logfoldchange&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="s1">&#39;pval&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="s1">&#39;pval_adj&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="s1">&#39;pct_pa&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;pct_na&#39;</span><span class="p">:</span> <span class="kc">None</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="DEGAnalyzer.create_visualization"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_deg.DEGAnalyzer.create_visualization">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">create_visualization</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+        <span class="n">pattern_names_with_stats</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">is_heatmap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates visualization of differential expression analysis results.</span>
+
+<span class="sd">        Generates either a heatmap or barplot visualization of the DEG analysis</span>
+<span class="sd">        results, depending on the specified parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            results: Dictionary containing differential expression results for</span>
+<span class="sd">                each gene.</span>
+<span class="sd">            pattern_names_with_stats: Optional list of pattern names with their</span>
+<span class="sd">                statistics for labeling (default: None).</span>
+<span class="sd">            is_heatmap: Whether to create a heatmap (True) or barplot (False)</span>
+<span class="sd">                visualization (default: False).</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - For heatmaps, uses pattern_names_with_stats for row labels</span>
+<span class="sd">            - For barplots, shows logfoldchange values with significance markers</span>
+<span class="sd">            - Saves visualization to the specified output directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">is_heatmap</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_heatmap_visualization</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">pattern_names_with_stats</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_barplot_visualization</span><span class="p">(</span><span class="n">results</span><span class="p">)</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_barplot_visualization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a grouped bar plot visualization of differential expression results.</span>
+
+<span class="sd">        Generates a bar plot showing log fold changes for each gene, grouped by their</span>
+<span class="sd">        functional categories, with significance markers.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            results: Dictionary mapping genes to their differential expression results,</span>
+<span class="sd">                containing:</span>
+<span class="sd">                - logfoldchange: Log2 fold change between PA and NA cells</span>
+<span class="sd">                - pval_adj: Adjusted p-value for significance testing</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Bars are colored red for positive and blue for negative fold changes</span>
+<span class="sd">            - Significance levels are indicated with stars above/below bars</span>
+<span class="sd">            - Groups are labeled on the x-axis with vertical text</span>
+<span class="sd">            - Plot is saved as &#39;deg_grouped_topk_{k}.pdf&#39; in the output directory</span>
+<span class="sd">            - Y-axis is limited to [-2, 2] for better visualization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># Calculate positions for grouped bars</span>
+        <span class="n">group_positions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current_pos</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">genes</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene_groups</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">group_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">genes</span> <span class="k">if</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">group_genes</span><span class="p">:</span>
+                <span class="n">group_positions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">group_name</span><span class="p">,</span> <span class="n">current_pos</span><span class="p">,</span> <span class="n">current_pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_genes</span><span class="p">)))</span>
+                <span class="n">current_pos</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_genes</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.5</span>
+
+        <span class="n">bar_positions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">bar_labels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y_offset</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+        <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">start_pos</span><span class="p">,</span> <span class="n">end_pos</span> <span class="ow">in</span> <span class="n">group_positions</span><span class="p">:</span>
+            <span class="n">group_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene_groups</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span> <span class="k">if</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+            <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start_pos</span><span class="p">,</span> <span class="n">start_pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">group_genes</span><span class="p">))</span>
+
+            <span class="c1"># Plot bars</span>
+            <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">gene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">group_genes</span><span class="p">):</span>
+                <span class="n">lfc</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="s1">&#39;logfoldchange&#39;</span><span class="p">]</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span> <span class="k">if</span> <span class="n">lfc</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;blue&#39;</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">lfc</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+
+                <span class="c1"># Add significance markers</span>
+                <span class="n">stars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_significance_stars</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="s1">&#39;pval_adj&#39;</span><span class="p">])</span>
+                <span class="n">text_y</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lfc</span> <span class="o">+</span> <span class="n">y_offset</span><span class="p">,</span> <span class="mf">1.9</span><span class="p">)</span> <span class="k">if</span> <span class="n">lfc</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="n">lfc</span> <span class="o">-</span> <span class="n">y_offset</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.9</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">text_y</span><span class="p">,</span> <span class="n">stars</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span> <span class="k">if</span> <span class="n">lfc</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;top&#39;</span><span class="p">)</span>
+
+            <span class="n">bar_positions</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+            <span class="n">bar_labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">group_genes</span><span class="p">)</span>
+
+            <span class="c1"># Add group labels</span>
+            <span class="n">group_center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">group_center</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.2</span><span class="p">,</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
+
+        <span class="c1"># Customize plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Differential Gene Expression (Log2 Fold Change PA vs NA)</span><span class="se">\n</span><span class="s2">All Cell Types (Top </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2"> matches)&quot;</span><span class="p">,</span>
+                 <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Genes&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Log2 Fold Change&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">bar_positions</span><span class="p">,</span> <span class="n">bar_labels</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Add legends</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_plot_legends</span><span class="p">()</span>
+
+        <span class="c1"># Save plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;deg_grouped_topk_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2">.pdf&quot;</span><span class="p">,</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_heatmap_visualization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">pattern_names_with_stats</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a heatmap visualization of differential expression across patterns.</span>
+
+<span class="sd">        Generates a heatmap showing log fold changes for each gene across different</span>
+<span class="sd">        expansion patterns, with genes grouped by functional categories and sorted</span>
+<span class="sd">        by average fold change within groups.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            results: Nested dictionary structure:</span>
+<span class="sd">                {pattern: {gene: {logfoldchange: float, pval_adj: float}}}</span>
+<span class="sd">                containing differential expression results for each pattern and gene.</span>
+<span class="sd">            pattern_names_with_stats: List of pattern names with additional statistics</span>
+<span class="sd">                for column labels.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Uses RdBu_r colormap centered at 0</span>
+<span class="sd">            - Includes significance markers for adjusted p-values</span>
+<span class="sd">            - Groups are separated by horizontal lines</span>
+<span class="sd">            - Saves both PDF and PNG versions</span>
+<span class="sd">            - Numerical results are saved separately</span>
+<span class="sd">            - Heatmap cell values are formatted to 2 decimal places</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize lists to store genes and track group boundaries</span>
+        <span class="n">all_genes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">group_boundaries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">current_position</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Prepare data for heatmap</span>
+        <span class="n">fold_changes</span> <span class="o">=</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+        <span class="n">p_values</span> <span class="o">=</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+
+        <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">fold_changes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">fold_changes</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">pattern</span><span class="p">][</span><span class="n">gene</span><span class="p">][</span><span class="s1">&#39;logfoldchange&#39;</span><span class="p">])</span>
+                <span class="n">p_values</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">pattern</span><span class="p">][</span><span class="n">gene</span><span class="p">][</span><span class="s1">&#39;pval_adj&#39;</span><span class="p">])</span>
+
+        <span class="c1"># Collect valid genes from each group and track boundaries</span>
+        <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">genes</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene_groups</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">valid_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">gene</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span> <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">fold_changes</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">valid_genes</span><span class="p">:</span>
+                <span class="n">avg_fold_changes</span> <span class="o">=</span> <span class="p">{</span><span class="n">gene</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">fold_changes</span><span class="p">[</span><span class="n">gene</span><span class="p">])</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">valid_genes</span><span class="p">}</span>
+                <span class="n">sorted_group_genes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">valid_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">g</span><span class="p">:</span> <span class="n">avg_fold_changes</span><span class="p">[</span><span class="n">g</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">all_genes</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sorted_group_genes</span><span class="p">)</span>
+                <span class="n">current_position</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_group_genes</span><span class="p">)</span>
+                <span class="n">group_boundaries</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">group_name</span><span class="p">,</span> <span class="n">current_position</span><span class="p">))</span>
+
+        <span class="c1"># Create heatmap data array</span>
+        <span class="n">heatmap_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">fold_changes</span><span class="p">[</span><span class="n">gene</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">all_genes</span><span class="p">])</span>
+
+        <span class="c1"># Create and customize heatmap</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_genes</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.4</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">heatmap_data</span><span class="p">,</span>
+                    <span class="n">annot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>     <span class="c1"># Show values in cells</span>
+                    <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;.2f&quot;</span><span class="p">,</span>      <span class="c1"># Format for cell values</span>
+                    <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;RdBu_r&quot;</span><span class="p">,</span>  <span class="c1"># Color map (red-blue)</span>
+                    <span class="n">center</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                    <span class="n">vmin</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span>        <span class="c1"># Clip minimum value for color scaling</span>
+                    <span class="n">vmax</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>         <span class="c1"># Clip maximum value for color scaling</span>
+                    <span class="n">xticklabels</span><span class="o">=</span><span class="n">pattern_names_with_stats</span><span class="p">,</span>
+                    <span class="n">yticklabels</span><span class="o">=</span><span class="n">all_genes</span><span class="p">,</span>
+                    <span class="n">cbar_kws</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;Log2 Fold Change (PA/NA)&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Add significance markers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_significance_markers</span><span class="p">(</span><span class="n">all_genes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">,</span> <span class="n">p_values</span><span class="p">)</span>
+
+        <span class="c1"># Add group labels and boundaries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_group_boundaries</span><span class="p">(</span><span class="n">group_boundaries</span><span class="p">,</span> <span class="n">all_genes</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Gene Expression Differences (PA vs NA) Across Expansion Patterns</span><span class="se">\n</span><span class="s1">(Top </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s1"> matches)&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Expansion Pattern&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Genes&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Save plots</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;gene_expression_heatmap_k</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2">.pdf&quot;</span><span class="p">,</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;gene_expression_heatmap_k</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">,</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># Save numerical results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_numerical_results</span><span class="p">(</span><span class="n">all_genes</span><span class="p">,</span> <span class="n">group_boundaries</span><span class="p">,</span> <span class="n">fold_changes</span><span class="p">,</span> <span class="n">p_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_significance_stars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Converts p-values to significance star notation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pvalue: Adjusted p-value from statistical test.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Significance stars:</span>
+<span class="sd">                - &#39;***&#39; for p ≤ 0.001</span>
+<span class="sd">                - &#39;**&#39; for p ≤ 0.01</span>
+<span class="sd">                - &#39;*&#39; for p ≤ 0.05</span>
+<span class="sd">                - &#39;&#39; (empty string) for p &gt; 0.05</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">pvalue</span> <span class="o">&lt;=</span> <span class="mf">0.001</span><span class="p">:</span> <span class="k">return</span> <span class="s1">&#39;***&#39;</span>
+        <span class="k">elif</span> <span class="n">pvalue</span> <span class="o">&lt;=</span> <span class="mf">0.01</span><span class="p">:</span> <span class="k">return</span> <span class="s1">&#39;**&#39;</span>
+        <span class="k">elif</span> <span class="n">pvalue</span> <span class="o">&lt;=</span> <span class="mf">0.05</span><span class="p">:</span> <span class="k">return</span> <span class="s1">&#39;*&#39;</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_plot_legends</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates and positions legends for significance levels and color coding.</span>
+
+<span class="sd">        Adds two legends to the current plot:</span>
+<span class="sd">            1. Color legend showing up/down regulation in PA cells</span>
+<span class="sd">            2. Significance level legend showing p-value thresholds</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Positions legends outside the main plot area</span>
+<span class="sd">            - Uses alpha=0.7 for color patches</span>
+<span class="sd">            - Adjusts subplot parameters to prevent legend overlap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">significance_elements</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;*** p ≤ 0.001&#39;</span><span class="p">),</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;** p ≤ 0.01&#39;</span><span class="p">),</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;* p ≤ 0.05&#39;</span><span class="p">),</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;ns p &gt; 0.05&#39;</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">color_elements</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Upregulated in PA&#39;</span><span class="p">),</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Downregulated in PA&#39;</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="n">color_elements</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Expression Change&#39;</span><span class="p">)</span>
+        <span class="n">sig_legend</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="n">significance_elements</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">),</span>
+                               <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;center left&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Adjusted Significance Levels&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">add_artist</span><span class="p">(</span><span class="n">sig_legend</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_significance_markers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">all_genes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pattern_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">p_values</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds significance markers to heatmap cells.</span>
+
+<span class="sd">        Overlays significance stars on heatmap cells based on adjusted p-values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            all_genes: List of gene names in order of appearance on heatmap.</span>
+<span class="sd">            pattern_names: List of pattern names defining heatmap columns.</span>
+<span class="sd">            p_values: Dictionary mapping genes to lists of p-values, one per pattern.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Uses standard significance levels:</span>
+<span class="sd">            - &#39;***&#39; for p &lt; 0.001</span>
+<span class="sd">            - &#39;**&#39; for p &lt; 0.01</span>
+<span class="sd">            - &#39;*&#39; for p &lt; 0.05</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">gene</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_genes</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pattern_names</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">p_values</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.001</span><span class="p">:</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;***&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">p_values</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.01</span><span class="p">:</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;**&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">p_values</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">:</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_group_boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_boundaries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span> <span class="n">all_genes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds group labels and visual boundaries to heatmap.</span>
+
+<span class="sd">        Adds group names on the left side of the heatmap and horizontal white</span>
+<span class="sd">        lines between groups.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            group_boundaries: List of tuples containing (group_name, ending_position)</span>
+<span class="sd">                for each gene group.</span>
+<span class="sd">            all_genes: List of all gene names to determine total heatmap height.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Group names are right-aligned and bold</span>
+<span class="sd">            - White horizontal lines separate groups</span>
+<span class="sd">            - Group labels are centered vertically within their group</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prev_pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">end_pos</span> <span class="ow">in</span> <span class="n">group_boundaries</span><span class="p">:</span>
+            <span class="n">middle_pos</span> <span class="o">=</span> <span class="n">prev_pos</span> <span class="o">+</span> <span class="p">(</span><span class="n">end_pos</span> <span class="o">-</span> <span class="n">prev_pos</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">middle_pos</span><span class="p">,</span> <span class="n">group_name</span><span class="p">,</span>
+                    <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span>
+                    <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">end_pos</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_genes</span><span class="p">):</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">end_pos</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">prev_pos</span> <span class="o">=</span> <span class="n">end_pos</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_numerical_results</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">all_genes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">group_boundaries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span>
+        <span class="n">fold_changes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+        <span class="n">p_values</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+        <span class="n">pattern_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves numerical results of differential expression analysis to CSV.</span>
+
+<span class="sd">        Creates a comprehensive CSV file containing fold changes and p-values</span>
+<span class="sd">        for all genes across all patterns, including group assignments.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            all_genes: Ordered list of genes included in the analysis.</span>
+<span class="sd">            group_boundaries: List of tuples containing (group_name, ending_position)</span>
+<span class="sd">                defining gene group boundaries.</span>
+<span class="sd">            fold_changes: Dictionary mapping genes to their fold change values</span>
+<span class="sd">                across patterns.</span>
+<span class="sd">            p_values: Dictionary mapping genes to their p-values across patterns.</span>
+<span class="sd">            pattern_names: List of pattern names used in the analysis.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Saves file as &#39;expression_analysis_results_k{top_k}.csv&#39; in the</span>
+<span class="sd">            output directory with columns:</span>
+<span class="sd">            - Gene: Gene name</span>
+<span class="sd">            - Group: Functional group assignment</span>
+<span class="sd">            - {pattern}_fold_change: Log2 fold change for each pattern</span>
+<span class="sd">            - {pattern}_pvalue: Adjusted p-value for each pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+            <span class="s1">&#39;Gene&#39;</span><span class="p">:</span> <span class="n">all_genes</span><span class="p">,</span>
+            <span class="s1">&#39;Group&#39;</span><span class="p">:</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">group_name</span> <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">end_pos</span> <span class="ow">in</span> <span class="n">group_boundaries</span> <span class="k">if</span> <span class="n">end_pos</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_genes</span><span class="p">))],</span>
+            <span class="o">**</span><span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">_fold_change&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">fold_changes</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">all_genes</span><span class="p">]</span>
+               <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pattern_names</span><span class="p">)},</span>
+            <span class="o">**</span><span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">_pvalue&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">p_values</span><span class="p">[</span><span class="n">gene</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">all_genes</span><span class="p">]</span>
+               <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pattern_names</span><span class="p">)}</span>
+        <span class="p">})</span>
+        <span class="n">results_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;expression_analysis_results_k</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">top_k</span><span class="si">}</span><span class="s2">.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DEGAnalyzer.analyze"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_deg.DEGAnalyzer.analyze">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span>
+        <span class="n">analyze_patterns</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs comprehensive differential expression analysis.</span>
+
+<span class="sd">        Main entry point for running the differential expression analysis,</span>
+<span class="sd">        with options for pattern-specific or global analysis.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing gene expression data and cell</span>
+<span class="sd">                annotations.</span>
+<span class="sd">            analyze_patterns: If True, performs separate analyses for each pattern</span>
+<span class="sd">                in patterns_list. If False, analyzes all cells together</span>
+<span class="sd">                (default: False).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Analysis results with genes as index and statistical</span>
+<span class="sd">                measures as columns. Format depends on analysis type:</span>
+<span class="sd">                - Global analysis: logfoldchange, pval, pval_adj per gene</span>
+<span class="sd">                - Pattern analysis: above statistics for each pattern</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Automatically preprocesses data before analysis, including</span>
+<span class="sd">            normalization and log transformation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Preprocess data</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">analyze_patterns</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">patterns_list</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_analyze_patterns</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_analyze_all</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_analyze_patterns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs separate differential expression analyses for each pattern.</span>
+
+<span class="sd">        Analyzes differential expression between PA and NA cells for each pattern</span>
+<span class="sd">        in patterns_list, calculating statistics and storing results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing preprocessed gene expression data</span>
+<span class="sd">                and a &#39;pattern&#39; column in obs containing pattern assignments.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Combined analysis results with columns:</span>
+<span class="sd">                {pattern_name}_{stat} for each pattern and statistic, where:</span>
+<span class="sd">                - pattern_name: Name of each analyzed pattern</span>
+<span class="sd">                - stat: One of [logfoldchange, pval, pval_adj, pct_pa, pct_na]</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Creates visualization of results across patterns</span>
+<span class="sd">            - Maintains statistics about PA cell percentages per pattern</span>
+<span class="sd">            - Filters data to include only cells belonging to each pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pattern_results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">pattern_stats</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">pattern_name</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">patterns_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">):</span>
+            <span class="c1"># Filter data for current pattern</span>
+            <span class="n">pattern_adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">pattern</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="c1"># Perform analysis</span>
+            <span class="n">results</span><span class="p">,</span> <span class="n">n_pa</span><span class="p">,</span> <span class="n">n_total</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perform_deg_analysis</span><span class="p">(</span><span class="n">pattern_adata</span><span class="p">)</span>
+            <span class="n">pattern_results</span><span class="p">[</span><span class="n">pattern_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span>
+            <span class="n">pattern_stats</span><span class="p">[</span><span class="n">pattern_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;total&#39;</span><span class="p">:</span> <span class="n">n_total</span><span class="p">,</span>
+                <span class="s1">&#39;pa&#39;</span><span class="p">:</span> <span class="n">n_pa</span><span class="p">,</span>
+                <span class="s1">&#39;percent_pa&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">n_pa</span><span class="o">/</span><span class="n">n_total</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span> <span class="k">if</span> <span class="n">n_total</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Create visualization with statistics</span>
+        <span class="n">pattern_names_with_stats</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="se">\n</span><span class="s2">(Total N=</span><span class="si">{</span><span class="n">pattern_stats</span><span class="p">[</span><span class="n">pattern</span><span class="p">][</span><span class="s1">&#39;total&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="se">\n</span><span class="s2">PA N=</span><span class="si">{</span><span class="n">pattern_stats</span><span class="p">[</span><span class="n">pattern</span><span class="p">][</span><span class="s1">&#39;pa&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">pattern_stats</span><span class="p">[</span><span class="n">pattern</span><span class="p">][</span><span class="s1">&#39;percent_pa&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span>
+            <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_visualization</span><span class="p">(</span>
+            <span class="n">pattern_results</span><span class="p">,</span>
+            <span class="n">pattern_names_with_stats</span><span class="o">=</span><span class="n">pattern_names_with_stats</span><span class="p">,</span>
+            <span class="n">is_heatmap</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Prepare results DataFrame</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_pattern_results_df</span><span class="p">(</span><span class="n">pattern_results</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_analyze_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata</span><span class="p">:</span> <span class="n">sc</span><span class="o">.</span><span class="n">AnnData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs global differential expression analysis across all cells.</span>
+
+<span class="sd">        Analyzes differential expression between PA and NA cells without</span>
+<span class="sd">        pattern stratification, creating visualizations and saving results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            adata: AnnData object containing preprocessed gene expression data</span>
+<span class="sd">                and cell annotations.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Analysis results with genes as index and columns for:</span>
+<span class="sd">                - logfoldchange: Log2 fold change between PA and NA cells</span>
+<span class="sd">                - pval: Raw p-value</span>
+<span class="sd">                - pval_adj: Adjusted p-value</span>
+<span class="sd">                - pct_pa: Percentage of PA cells expressing the gene</span>
+<span class="sd">                - pct_na: Percentage of NA cells expressing the gene</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Creates bar plot visualization of results automatically and saves</span>
+<span class="sd">            to output directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">perform_deg_analysis</span><span class="p">(</span><span class="n">adata</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_visualization</span><span class="p">(</span>
+            <span class="n">results</span><span class="p">,</span>
+            <span class="n">is_heatmap</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_pattern_results_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern_results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Converts pattern-specific results into a combined DataFrame.</span>
+
+<span class="sd">        Processes the nested dictionary of pattern results into a wide-format</span>
+<span class="sd">        DataFrame with pattern-specific columns for each statistical measure.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pattern_results: Dictionary mapping pattern names to their respective</span>
+<span class="sd">                differential expression results dictionaries. Structure:</span>
+<span class="sd">                {pattern_name: {gene: {stat_name: value}}}</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Wide-format DataFrame with:</span>
+<span class="sd">                - Index: Gene names</span>
+<span class="sd">                - Columns: {pattern}_{stat} for each pattern and statistical measure</span>
+<span class="sd">                - Values: Statistical results for each gene-pattern combination</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Column names are prefixed with pattern names to distinguish</span>
+<span class="sd">            statistics across patterns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">:</span>
+            <span class="n">pattern_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">pattern_results</span><span class="p">[</span><span class="n">pattern</span><span class="p">],</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+            <span class="n">pattern_df</span> <span class="o">=</span> <span class="n">pattern_df</span><span class="o">.</span><span class="n">add_prefix</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s1">_&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">results_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">results_df</span> <span class="o">=</span> <span class="n">pattern_df</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">results_df</span><span class="p">,</span> <span class="n">pattern_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results_df</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Minuk Ma.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

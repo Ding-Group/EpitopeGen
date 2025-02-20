@@ -1,0 +1,881 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>epitopegen.annotate &mdash; EpitopeGen 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://ding-group.github.io/EpitopeGen/_modules/epitopegen/annotate.html" />
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EpitopeGen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EpitopeGen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">epitopegen.annotate</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for epitopegen.annotate</h1><div class="highlight"><pre>
+<span></span><span class="c1"># package/epitopegen/annotate.py</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">Levenshtein</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">combinations_with_replacement</span><span class="p">,</span> <span class="n">combinations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span><span class="p">,</span> <span class="n">cpu_count</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+
+
+<div class="viewcode-block" id="EpitopeAnnotator"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.EpitopeAnnotator">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">EpitopeAnnotator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class for annotating epitope predictions with phenotype associations.</span>
+
+<span class="sd">    This annotator matches predicted epitopes against a reference database to identify</span>
+<span class="sd">    potential protein associations and phenotypes.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        database: pandas DataFrame containing the reference epitopes and their</span>
+<span class="sd">            associated proteins.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the annotator with a reference epitope database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            database_path: Path to CSV file containing reference epitopes.</span>
+<span class="sd">                The CSV must contain at least &#39;peptide&#39; and &#39;protein&#39; columns.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the database file lacks required columns.</span>
+<span class="sd">            FileNotFoundError: If the database file cannot be found.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">database</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">database_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_database</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_database</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates the format of the reference database.</span>
+
+<span class="sd">        Checks if the loaded database contains the required columns</span>
+<span class="sd">        (&#39;peptide&#39; and &#39;protein&#39;).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If any required columns are missing from the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">required_columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;peptide&#39;</span><span class="p">,</span> <span class="s1">&#39;protein&#39;</span><span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">required_columns</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Database must contain columns: </span><span class="si">{</span><span class="n">required_columns</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calculate_annotation_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates statistics about epitope matches and protein associations.</span>
+
+<span class="sd">        Computes various statistics about the matches between predicted epitopes</span>
+<span class="sd">        and reference database, including cumulative match rates and protein</span>
+<span class="sd">        distributions.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df: DataFrame containing prediction results with match and protein</span>
+<span class="sd">                reference columns (match_0, match_1, etc. and ref_protein_0,</span>
+<span class="sd">                ref_protein_1, etc.).</span>
+<span class="sd">            top_k: Number of top predictions to consider for statistics.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dictionary containing the following statistics:</span>
+<span class="sd">                - total_tcrs: Number of TCR sequences analyzed</span>
+<span class="sd">                - total_predictions: Total number of predictions made</span>
+<span class="sd">                - cumulative_matches: Dict with statistics at each k:</span>
+<span class="sd">                    - tcrs_matched: Number of TCRs with at least one match</span>
+<span class="sd">                    - match_rate: Percentage of TCRs with matches</span>
+<span class="sd">                - matched_proteins: Dict of protein names and their frequencies</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Match columns should be boolean indicators of whether each prediction</span>
+<span class="sd">            matched the reference database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">match_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span> <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="n">protein_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;ref_protein_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span> <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;ref_protein_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+        <span class="c1"># Basic stats</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;total_tcrs&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+            <span class="s2">&quot;total_predictions&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">match_cols</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Calculate cumulative matches at each k</span>
+        <span class="n">cumulative_matches</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">match_cols</span><span class="p">)):</span>
+            <span class="c1"># Get columns up to current k</span>
+            <span class="n">cols_to_k</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+            <span class="n">matches_at_k</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">cols_to_k</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">match_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">matches_at_k</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="n">cumulative_matches</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;tcrs_matched&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">matches_at_k</span><span class="p">),</span>
+                <span class="s2">&quot;match_rate&quot;</span><span class="p">:</span> <span class="n">match_rate</span>
+            <span class="p">}</span>
+
+        <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;cumulative_matches&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cumulative_matches</span>
+
+        <span class="c1"># Most common matched proteins (across all positions)</span>
+        <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;matched_proteins&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span>
+            <span class="n">protein</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">protein_cols</span>
+            <span class="k">for</span> <span class="n">protein</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+        <span class="p">])</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">stats</span>
+
+<div class="viewcode-block" id="EpitopeAnnotator.annotate_all"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.EpitopeAnnotator.annotate_all">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">annotate_all</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">predictions_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;levenshtein&#39;</span><span class="p">,</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">max_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs annotation on predictions from multiple model checkpoints.</span>
+
+<span class="sd">        Processes all prediction files in the specified directory, annotating each</span>
+<span class="sd">        with phenotype associations and saving results individually.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            predictions_dir: Directory containing prediction CSV files from multiple models.</span>
+<span class="sd">            method: Method for matching epitopes. Either &#39;levenshtein&#39; or &#39;substring&#39;</span>
+<span class="sd">                (default: &#39;levenshtein&#39;).</span>
+<span class="sd">            threshold: Maximum Levenshtein distance for considering matches (default: 1).</span>
+<span class="sd">            top_k: Number of top predictions to analyze per TCR (default: 50).</span>
+<span class="sd">            max_length: Maximum length to consider for epitopes. Longer sequences will be</span>
+<span class="sd">                trimmed (default: 9).</span>
+<span class="sd">            output_dir: Directory to save annotation results. If None, results are only</span>
+<span class="sd">                returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Combined DataFrame containing annotations for all model predictions.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Expects prediction files to be named in format &#39;predictions_ckptN.csv&#39; where</span>
+<span class="sd">            N is the checkpoint number.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Running Multi-Model Annotation ===&quot;</span><span class="p">)</span>
+        <span class="n">pred_files</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">predictions_dir</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Using </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pred_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> model checkpoints&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">pred_file</span> <span class="ow">in</span> <span class="n">pred_files</span><span class="p">:</span>
+            <span class="n">df_pred</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">predictions_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">pred_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">model_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">pred_file</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">][</span><span class="mi">4</span><span class="p">:])</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">output_dir</span><span class="si">}</span><span class="s2">/annotations_</span><span class="si">{</span><span class="n">model_idx</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span>
+                <span class="n">predictions_df</span><span class="o">=</span><span class="n">df_pred</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+                <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
+                <span class="n">top_k</span><span class="o">=</span><span class="n">top_k</span><span class="p">,</span>
+                <span class="n">max_length</span><span class="o">=</span><span class="n">max_length</span><span class="p">,</span>
+                <span class="n">output_path</span><span class="o">=</span><span class="n">output_path</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EpitopeAnnotator.annotate"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.EpitopeAnnotator.annotate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">annotate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">predictions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;levenshtein&#39;</span><span class="p">,</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">max_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span>
+        <span class="n">output_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Annotates predicted epitopes with phenotype associations from reference database.</span>
+
+<span class="sd">        Matches predicted epitopes against the reference database using either Levenshtein</span>
+<span class="sd">        distance or substring matching, identifying potential protein associations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            predictions_df: DataFrame containing TCR predictions. Must have &#39;tcr&#39; column</span>
+<span class="sd">                and &#39;pred_0&#39; through &#39;pred_{top_k-1}&#39; columns.</span>
+<span class="sd">            method: Matching method to use. Either &#39;levenshtein&#39; or &#39;substring&#39;</span>
+<span class="sd">                (default: &#39;levenshtein&#39;).</span>
+<span class="sd">            threshold: Maximum Levenshtein distance for considering matches (default: 1).</span>
+<span class="sd">            top_k: Number of top predictions to analyze per TCR (default: 50).</span>
+<span class="sd">            max_length: Maximum length to consider for epitopes. Longer sequences will be</span>
+<span class="sd">                trimmed (default: 9).</span>
+<span class="sd">            output_path: Path to save annotation results CSV. If None, results are only</span>
+<span class="sd">                returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Original DataFrame with additional annotation columns:</span>
+<span class="sd">                - match_{i}: Boolean indicating if prediction i matched reference database</span>
+<span class="sd">                - ref_epitope_{i}: Matching reference epitope for prediction i</span>
+<span class="sd">                - ref_protein_{i}: Source protein for matching reference epitope i</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If invalid method specified or no prediction columns found.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Prints detailed statistics about matches and protein associations, including</span>
+<span class="sd">            cumulative match rates at different k values and top matched proteins.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Starting epitopegen Annotation ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Distance threshold: </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Analyzing top </span><span class="si">{</span><span class="n">top_k</span><span class="si">}</span><span class="s2"> predictions&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Reference database size: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">)</span><span class="si">}</span><span class="s2"> epitopes&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;levenshtein&#39;</span><span class="p">,</span> <span class="s1">&#39;substring&#39;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Method must be either &#39;levenshtein&#39; or &#39;substring&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Trim predictions to max_length if specified</span>
+        <span class="n">pred_columns</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;pred_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span> <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;pred_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">predictions_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pred_columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No prediction columns found in DataFrame&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_length</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">pred_columns</span><span class="p">:</span>
+                <span class="n">predictions_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">predictions_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[:</span><span class="n">max_length</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">x</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Process each prediction column</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">pred_col</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pred_columns</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing </span><span class="si">{</span><span class="n">pred_col</span><span class="si">}</span><span class="s2"> ...&quot;</span><span class="p">)</span>
+
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_predictions</span><span class="p">(</span>
+                <span class="n">predictions_df</span><span class="p">[</span><span class="n">pred_col</span><span class="p">],</span>
+                <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="n">method</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Add results to DataFrame</span>
+            <span class="n">match_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">ref_epi_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ref_epitope_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">ref_prot_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ref_protein_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+
+            <span class="n">predictions_df</span><span class="p">[</span><span class="n">match_col</span><span class="p">],</span> <span class="n">predictions_df</span><span class="p">[</span><span class="n">ref_epi_col</span><span class="p">],</span> <span class="n">predictions_df</span><span class="p">[</span><span class="n">ref_prot_col</span><span class="p">]</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">results</span><span class="p">)</span>
+
+        <span class="c1"># Save results if path provided</span>
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">predictions_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Calculate statistics</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_annotation_stats</span><span class="p">(</span><span class="n">predictions_df</span><span class="p">,</span> <span class="n">top_k</span><span class="p">)</span>
+
+        <span class="c1"># Save results if path provided</span>
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">predictions_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;output_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+
+        <span class="c1"># Print summary</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Annotation Summary ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Processed </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;total_tcrs&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Cumulative matches at different k:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Top-1: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;tcrs_matched&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;match_rate&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">49</span><span class="p">]:</span>  <span class="c1"># Show matches at key points</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">]):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Top-</span><span class="si">{</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;tcrs_matched&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;match_rate&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Top source proteins (across all positions):&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">protein</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;matched_proteins&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">5</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">protein</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> matches&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Results saved to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;===========================&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">predictions_df</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_match</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pred_epitope</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Finds matching reference epitopes for a single predicted epitope.</span>
+
+<span class="sd">        Searches the reference database for matches using either Levenshtein distance</span>
+<span class="sd">        or substring matching.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred_epitope: Predicted epitope sequence to find matches for.</span>
+<span class="sd">            threshold: Maximum Levenshtein distance for considering matches when using</span>
+<span class="sd">                &#39;levenshtein&#39; method.</span>
+<span class="sd">            method: Matching method to use, either &#39;levenshtein&#39; or &#39;substring&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing:</span>
+<span class="sd">                - int: 1 if match found, 0 otherwise</span>
+<span class="sd">                - Optional[str]: Matching reference epitope if found, None otherwise</span>
+<span class="sd">                - Optional[str]: Source protein of matching epitope if found, None otherwise</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            For &#39;levenshtein&#39; method, returns first match within threshold distance.</span>
+<span class="sd">            For &#39;substring&#39; method, returns first reference epitope containing the</span>
+<span class="sd">            predicted sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pred_epitope</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;levenshtein&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ref_epitope</span><span class="p">,</span> <span class="n">ref_protein</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">[</span><span class="s1">&#39;peptide&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">[</span><span class="s1">&#39;protein&#39;</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">Levenshtein</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">pred_epitope</span><span class="p">,</span> <span class="n">ref_epitope</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ref_epitope</span><span class="p">,</span> <span class="n">ref_protein</span>
+
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;substring&#39;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ref_epitope</span><span class="p">,</span> <span class="n">ref_protein</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">[</span><span class="s1">&#39;peptide&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">database</span><span class="p">[</span><span class="s1">&#39;protein&#39;</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">pred_epitope</span> <span class="ow">in</span> <span class="n">ref_epitope</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ref_epitope</span><span class="p">,</span> <span class="n">ref_protein</span>
+
+        <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_process_predictions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pred_column</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Processes multiple predictions in parallel using multiprocessing.</span>
+
+<span class="sd">        Applies _find_match to each prediction in the input series using a process pool</span>
+<span class="sd">        for parallel execution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pred_column: Series of predicted epitope sequences to process.</span>
+<span class="sd">            threshold: Maximum Levenshtein distance for considering matches when using</span>
+<span class="sd">                &#39;levenshtein&#39; method.</span>
+<span class="sd">            method: Matching method to use, either &#39;levenshtein&#39; or &#39;substring&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[tuple]: List of tuples, each containing:</span>
+<span class="sd">                - int: 1 if match found, 0 otherwise</span>
+<span class="sd">                - Optional[str]: Matching reference epitope if found, None otherwise</span>
+<span class="sd">                - Optional[str]: Source protein of matching epitope if found, None otherwise</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Uses multiprocessing.Pool with maxtasksperchild=100 to prevent memory</span>
+<span class="sd">            buildup during parallel processing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create a Pool with explicit start method</span>
+        <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">cpu_count</span><span class="p">(),</span> <span class="n">maxtasksperchild</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_find_match</span><span class="p">,</span>
+                <span class="p">[(</span><span class="n">epitope</span><span class="p">,</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span> <span class="k">for</span> <span class="n">epitope</span> <span class="ow">in</span> <span class="n">pred_column</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="EpitopeEnsembler"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.EpitopeEnsembler">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">EpitopeEnsembler</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class for ensembling multiple epitope annotation results to reduce variance.</span>
+
+<span class="sd">    This class provides methods for combining and analyzing results from multiple</span>
+<span class="sd">    model predictions through majority voting and statistical analysis.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        threshold: Float threshold for majority voting (between 0 and 1).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the ensembler with specified voting threshold.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            threshold: Minimum fraction of votes needed for consensus in majority</span>
+<span class="sd">                voting (default: 0.5). Must be between 0 and 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_most_frequent</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Gets the most frequent non-null value in a pandas Series.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            series: Pandas Series containing values to analyze.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Any: Most frequent non-null value in the series. Returns np.nan if</span>
+<span class="sd">                all values are null or series is empty.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            In case of ties, returns the first value encountered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">series</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">series</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calculate_ensemble_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">annotation_files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates comprehensive statistics for ensemble predictions.</span>
+
+<span class="sd">        Analyzes the ensemble results to generate statistics about matches,</span>
+<span class="sd">        match rates, and protein distributions at different k values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            base_df: DataFrame containing the ensemble prediction results.</span>
+<span class="sd">            annotation_files: List of paths to original annotation files used</span>
+<span class="sd">                in ensemble.</span>
+<span class="sd">            top_k: Number of top predictions to analyze per TCR.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dictionary containing ensemble statistics:</span>
+<span class="sd">                - num_files: Number of annotation files used</span>
+<span class="sd">                - total_tcrs: Total number of TCR sequences</span>
+<span class="sd">                - threshold: Majority voting threshold used</span>
+<span class="sd">                - input_files: Names of input annotation files</span>
+<span class="sd">                - cumulative_matches: Dict with statistics at each k:</span>
+<span class="sd">                    - tcrs_matched: Number of TCRs with matches</span>
+<span class="sd">                    - match_rate: Percentage of TCRs with matches</span>
+<span class="sd">                    - top_proteins: Most common matched proteins</span>
+<span class="sd">                - total_matched_tcrs: Total TCRs with any matches</span>
+<span class="sd">                - overall_match_rate: Overall percentage of TCRs matched</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Statistics are calculated both per-k and across all k values</span>
+<span class="sd">            to provide comprehensive analysis of ensemble performance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;num_files&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">annotation_files</span><span class="p">),</span>
+            <span class="s2">&quot;total_tcrs&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_df</span><span class="p">),</span>
+            <span class="s2">&quot;threshold&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">,</span>
+            <span class="s2">&quot;input_files&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">annotation_files</span><span class="p">],</span>
+            <span class="s2">&quot;cumulative_matches&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;most_common_proteins&quot;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Calculate cumulative statistics for each k</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">):</span>
+            <span class="n">match_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">protein_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ref_protein_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span>
+
+            <span class="n">matches</span> <span class="o">=</span> <span class="n">base_df</span><span class="p">[</span><span class="n">match_col</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">match_rate</span> <span class="o">=</span> <span class="p">(</span><span class="n">matches</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_df</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span>
+
+            <span class="c1"># Get protein distribution for this k</span>
+            <span class="n">proteins</span> <span class="o">=</span> <span class="n">base_df</span><span class="p">[</span><span class="n">protein_col</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+            <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;cumulative_matches&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;tcrs_matched&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">matches</span><span class="p">),</span>
+                <span class="s2">&quot;match_rate&quot;</span><span class="p">:</span> <span class="n">match_rate</span><span class="p">,</span>
+                <span class="s2">&quot;top_proteins&quot;</span><span class="p">:</span> <span class="n">proteins</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Overall statistics</span>
+        <span class="n">all_matches</span> <span class="o">=</span> <span class="n">base_df</span><span class="p">[[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)]]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;total_matched_tcrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">all_matches</span><span class="p">)</span>
+        <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;overall_match_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">all_matches</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_df</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="k">return</span> <span class="n">stats</span>
+
+<div class="viewcode-block" id="EpitopeEnsembler.ensemble"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.EpitopeEnsembler.ensemble">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">ensemble</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">annotation_files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">output_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines multiple annotation results using majority voting ensemble method.</span>
+
+<span class="sd">        Processes multiple annotation files to create a consensus prediction through</span>
+<span class="sd">        majority voting at each k value. For matched sequences, determines the most</span>
+<span class="sd">        frequent protein and epitope annotations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            annotation_files: List of paths to annotation CSV files. Each file should</span>
+<span class="sd">                contain matching results from a different model checkpoint.</span>
+<span class="sd">            output_path: Path to save the ensembled results CSV. If None, results</span>
+<span class="sd">                are only returned as DataFrame.</span>
+<span class="sd">            top_k: Number of top predictions to consider per TCR (default: 32).</span>
+<span class="sd">                Each k represents a different cutoff point for analysis.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: DataFrame containing ensembled results with columns:</span>
+<span class="sd">                - Original TCR sequence columns</span>
+<span class="sd">                - match_{k}: Binary indicators for consensus matches at each k</span>
+<span class="sd">                - ref_protein_{k}: Most frequent matching protein at each k</span>
+<span class="sd">                - ref_epitope_{k}: Most frequent matching epitope at each k</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            - Uses the threshold specified during initialization for majority voting</span>
+<span class="sd">            - Prints detailed statistics about match rates and protein distributions</span>
+<span class="sd">              at different k values</span>
+<span class="sd">            - The first annotation file&#39;s structure is used as the base for the</span>
+<span class="sd">              ensemble results</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Starting epitopegen Ensemble ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">annotation_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> annotation files&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Voting threshold: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Analyzing top </span><span class="si">{</span><span class="n">top_k</span><span class="si">}</span><span class="s2"> predictions&quot;</span><span class="p">)</span>
+
+        <span class="n">cutoffs</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ensembling </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">annotation_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> annotation files...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Read all annotation files</span>
+        <span class="n">dfs</span> <span class="o">=</span> <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">annotation_files</span><span class="p">]</span>
+        <span class="n">base_df</span> <span class="o">=</span> <span class="n">dfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Process each cutoff</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">cutoffs</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing k=</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Create cumulative matches for each file</span>
+            <span class="n">cumulative_matches</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">protein_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">epitope_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">dfs</span><span class="p">:</span>
+                <span class="c1"># Get matches up to k</span>
+                <span class="n">match_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+                <span class="n">cumulative_match</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">match_cols</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">cumulative_matches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cumulative_match</span><span class="p">)</span>
+
+                <span class="c1"># Get corresponding proteins and epitopes</span>
+                <span class="n">protein_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;ref_protein_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])</span>
+                <span class="n">epitope_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;ref_epitope_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])</span>
+
+            <span class="c1"># Stack predictions</span>
+            <span class="n">stacked_matches</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">cumulative_matches</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">stacked_proteins</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">protein_predictions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">stacked_epitopes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">epitope_predictions</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Perform majority voting</span>
+            <span class="n">majority_vote</span> <span class="o">=</span> <span class="p">(</span><span class="n">stacked_matches</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+            <span class="c1"># Update result columns</span>
+            <span class="n">base_df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">majority_vote</span>
+
+            <span class="c1"># Set proteins and epitopes based on majority vote</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">majority_vote</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="n">base_df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;ref_protein_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">base_df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;ref_epitope_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+            <span class="n">base_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ref_protein_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">stacked_proteins</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_most_frequent</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">base_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ref_epitope_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">stacked_epitopes</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_most_frequent</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="c1"># Calculate statistics</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_ensemble_stats</span><span class="p">(</span><span class="n">base_df</span><span class="p">,</span> <span class="n">annotation_files</span><span class="p">,</span> <span class="n">top_k</span><span class="p">)</span>
+
+        <span class="c1"># Save results if path provided</span>
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">base_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;output_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+
+        <span class="c1"># Print summary</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Ensemble Summary ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Processed </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;total_tcrs&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Input files: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;input_files&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Cumulative matches after ensemble:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Top-1: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;tcrs_matched&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;match_rate&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">]:</span>  <span class="c1"># Show matches at key points</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">top_k</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Top-</span><span class="si">{</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;tcrs_matched&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;match_rate&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Show protein distributions at key points</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Top proteins at different k:&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">top_k</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="n">top_k</span><span class="o">-</span><span class="mi">1</span><span class="p">)]:</span>  <span class="c1"># Show for k=0, 5, 10</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  At k=</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">protein</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;cumulative_matches&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="s1">&#39;top_proteins&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    - </span><span class="si">{</span><span class="n">protein</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> matches&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Overall: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;total_matched_tcrs&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCRs matched &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;overall_match_rate&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%)&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Results saved to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;===========================&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">base_df</span></div></div>
+
+
+<div class="viewcode-block" id="analyze_match_overlap"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.analyze_match_overlap">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_match_overlap</span><span class="p">(</span><span class="n">file1_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file2_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                         <span class="n">tcr_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;cdr3&#39;</span><span class="p">,</span> <span class="n">total_population</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyzes the overlap between matched TCRs in two prediction result files.</span>
+
+<span class="sd">    Compares two sets of TCR prediction results to determine the overlap in their</span>
+<span class="sd">    matches, considering the top K predictions for each TCR. A TCR is considered</span>
+<span class="sd">    matched if any of its matches from match_0 to match_{K-1} equals 1.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file1_path: Path to first CSV file containing TCR prediction results.</span>
+<span class="sd">        file2_path: Path to second CSV file containing TCR prediction results.</span>
+<span class="sd">        top_k: Number of top predictions to consider for each TCR (default: 1).</span>
+<span class="sd">        tcr_col: Name of the column containing TCR sequences (default: &#39;cdr3&#39;).</span>
+<span class="sd">        total_population: Total size of TCR population for calculating expected</span>
+<span class="sd">            overlap. If None, uses the length of input data (default: None).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Dictionary containing overlap statistics:</span>
+<span class="sd">            - file1: Name of first input file</span>
+<span class="sd">            - file2: Name of second input file</span>
+<span class="sd">            - total_tcrs: Total number of TCRs in population</span>
+<span class="sd">            - file1_matches: Number of matched TCRs in first file</span>
+<span class="sd">            - file2_matches: Number of matched TCRs in second file</span>
+<span class="sd">            - overlap_size: Number of TCRs matched in both files</span>
+<span class="sd">            - overlap_pct_file1: Percentage of file1 matches also in file2</span>
+<span class="sd">            - overlap_pct_file2: Percentage of file2 matches also in file1</span>
+<span class="sd">            - expected_overlap_pct: Expected random overlap percentage</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - Input CSV files must contain a TCR sequence column and match_k columns</span>
+<span class="sd">          (match_0 through match_{K-1})</span>
+<span class="sd">        - Prints detailed overlap statistics to stdout</span>
+<span class="sd">        - Handles edge cases where no matches are found in either file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Read CSVs and drop NA values in TCR column</span>
+    <span class="n">df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file1_path</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">])</span>
+    <span class="n">df2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file2_path</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">])</span>
+
+    <span class="c1"># Get total population size</span>
+    <span class="n">total_tcrs</span> <span class="o">=</span> <span class="n">total_population</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">df1</span><span class="p">)</span>
+
+    <span class="c1"># Create masks for TCRs with matches in top K predictions</span>
+    <span class="n">match_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)]</span>
+    <span class="n">df1_match_mask</span> <span class="o">=</span> <span class="n">df1</span><span class="p">[</span><span class="n">match_cols</span><span class="p">]</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">df2_match_mask</span> <span class="o">=</span> <span class="n">df2</span><span class="p">[</span><span class="n">match_cols</span><span class="p">]</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Get matched TCRs</span>
+    <span class="n">df1_matched</span> <span class="o">=</span> <span class="n">df1</span><span class="p">[</span><span class="n">df1_match_mask</span><span class="p">]</span>
+    <span class="n">df2_matched</span> <span class="o">=</span> <span class="n">df2</span><span class="p">[</span><span class="n">df2_match_mask</span><span class="p">]</span>
+
+    <span class="c1"># Get unique TCRs and calculate overlap</span>
+    <span class="n">matched_tcrs_1</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df1_matched</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">])</span>
+    <span class="n">matched_tcrs_2</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df2_matched</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">])</span>
+    <span class="n">overlap</span> <span class="o">=</span> <span class="n">matched_tcrs_1</span> <span class="o">&amp;</span> <span class="n">matched_tcrs_2</span>
+
+    <span class="c1"># Calculate expected random overlap</span>
+    <span class="n">size1</span><span class="p">,</span> <span class="n">size2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matched_tcrs_1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">matched_tcrs_2</span><span class="p">)</span>
+    <span class="n">expected_matches</span> <span class="o">=</span> <span class="n">size1</span> <span class="o">*</span> <span class="p">(</span><span class="n">size2</span> <span class="o">/</span> <span class="n">total_tcrs</span><span class="p">)</span>
+    <span class="n">expected_overlap_pct</span> <span class="o">=</span> <span class="n">expected_matches</span> <span class="o">/</span> <span class="nb">min</span><span class="p">(</span><span class="n">size1</span><span class="p">,</span> <span class="n">size2</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">if</span> <span class="nb">min</span><span class="p">(</span><span class="n">size1</span><span class="p">,</span> <span class="n">size2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+
+    <span class="c1"># Calculate actual overlap percentages</span>
+    <span class="n">overlap_pct_1</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df1_matched</span><span class="p">[</span><span class="n">df1_matched</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">overlap</span><span class="p">)])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df1_matched</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df1_matched</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">overlap_pct_2</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df2_matched</span><span class="p">[</span><span class="n">df2_matched</span><span class="p">[</span><span class="n">tcr_col</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">overlap</span><span class="p">)])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df2_matched</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df2_matched</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+
+    <span class="c1"># Print results</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">*** Between </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">file1_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> &amp; </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">file2_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (top </span><span class="si">{</span><span class="n">top_k</span><span class="si">}</span><span class="s2"> matches)&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- Total TCRs: </span><span class="si">{</span><span class="n">total_tcrs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- Expected random overlap: </span><span class="si">{</span><span class="n">expected_overlap_pct</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- File 1 matched TCRs: </span><span class="si">{</span><span class="n">size1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- File 2 matched TCRs: </span><span class="si">{</span><span class="n">size2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- Overlap percentage in File 1: </span><span class="si">{</span><span class="n">overlap_pct_1</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- Overlap percentage in File 2: </span><span class="si">{</span><span class="n">overlap_pct_2</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;file1&#39;</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">file1_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s1">&#39;file2&#39;</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">file2_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="s1">&#39;total_tcrs&#39;</span><span class="p">:</span> <span class="n">total_tcrs</span><span class="p">,</span>
+        <span class="s1">&#39;file1_matches&#39;</span><span class="p">:</span> <span class="n">size1</span><span class="p">,</span>
+        <span class="s1">&#39;file2_matches&#39;</span><span class="p">:</span> <span class="n">size2</span><span class="p">,</span>
+        <span class="s1">&#39;overlap_size&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">overlap</span><span class="p">),</span>
+        <span class="s1">&#39;overlap_pct_file1&#39;</span><span class="p">:</span> <span class="n">overlap_pct_1</span><span class="p">,</span>
+        <span class="s1">&#39;overlap_pct_file2&#39;</span><span class="p">:</span> <span class="n">overlap_pct_2</span><span class="p">,</span>
+        <span class="s1">&#39;expected_overlap_pct&#39;</span><span class="p">:</span> <span class="n">expected_overlap_pct</span>
+    <span class="p">}</span></div>
+
+<div class="viewcode-block" id="analyze_pair"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.analyze_pair">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">analyze_pair</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyzes match overlap between a single pair of prediction files.</span>
+
+<span class="sd">    Helper function designed to work with multiprocessing, processing a pair of</span>
+<span class="sd">    files and calculating their overlap statistics.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        args: Tuple containing paths to two prediction files (file1_path, file2_path).</span>
+<span class="sd">        top_k: Number of top predictions to consider for each TCR (default: 1).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[Tuple[str, str, float]]: If successful, returns tuple containing:</span>
+<span class="sd">            - str: Filename of first file</span>
+<span class="sd">            - str: Filename of second file</span>
+<span class="sd">            - float: Average overlap percentage between the files</span>
+<span class="sd">        Returns None if processing fails.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - Uses &#39;tcr&#39; as the column name for TCR sequences</span>
+<span class="sd">        - Prints error message to stdout if processing fails</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">file1_path</span><span class="p">,</span> <span class="n">file2_path</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">analyze_match_overlap</span><span class="p">(</span><span class="n">file1_path</span><span class="p">,</span> <span class="n">file2_path</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="n">top_k</span><span class="p">,</span> <span class="n">tcr_col</span><span class="o">=</span><span class="s1">&#39;tcr&#39;</span><span class="p">)</span>
+        <span class="n">overlap_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;overlap_pct_file1&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;overlap_pct_file2&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file1_path</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">file2_path</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">overlap_value</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error processing </span><span class="si">{</span><span class="n">file1_path</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">file2_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="visualize_match_overlaps_parallel"><a class="viewcode-back" href="../../modules.html#epitopegen.annotate.visualize_match_overlaps_parallel">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">visualize_match_overlaps_parallel</span><span class="p">(</span><span class="n">files_list</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_processes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generates a heatmap visualization of match overlaps between prediction files.</span>
+
+<span class="sd">    Creates a heatmap showing the pairwise overlap percentages between all</span>
+<span class="sd">    combinations of prediction files using parallel processing for efficiency.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        files_list: List of paths to prediction result files to analyze.</span>
+<span class="sd">        outdir: Directory path where the heatmap visualization will be saved.</span>
+<span class="sd">        top_k: Number of top predictions to consider for each TCR (default: 1).</span>
+<span class="sd">        n_processes: Number of parallel processes to use. If None, uses CPU count</span>
+<span class="sd">            minus 1 (default: None).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing:</span>
+<span class="sd">            - pd.DataFrame: Matrix of overlap percentages between all file pairs</span>
+<span class="sd">            - list[str]: List of filenames used as matrix labels</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - Creates a heatmap visualization saved as &#39;match_overlap_heatmap_topK.pdf&#39;</span>
+<span class="sd">        - Uses seaborn for heatmap generation with YlOrRd colormap</span>
+<span class="sd">        - Processes file pairs in parallel for improved performance</span>
+<span class="sd">        - Creates output directory if it doesn&#39;t exist</span>
+<span class="sd">        - Matrix is symmetric with diagonal values representing self-overlap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create output directory if it doesn&#39;t exist</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Determine number of processes</span>
+    <span class="k">if</span> <span class="n">n_processes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">n_processes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Leave one CPU free</span>
+
+    <span class="c1"># Generate all pairs of files</span>
+    <span class="n">file_pairs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">combinations_with_replacement</span><span class="p">(</span><span class="n">files_list</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># Create partial function with fixed top_k</span>
+    <span class="n">analyze_pair_fixed</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">analyze_pair</span><span class="p">,</span> <span class="n">top_k</span><span class="o">=</span><span class="n">top_k</span><span class="p">)</span>
+
+    <span class="c1"># Process pairs in parallel</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting parallel processing with </span><span class="si">{</span><span class="n">n_processes</span><span class="si">}</span><span class="s2"> processes...&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">n_processes</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">analyze_pair_fixed</span><span class="p">,</span> <span class="n">file_pairs</span><span class="p">)</span>
+
+    <span class="c1"># Filter out any failed results</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="c1"># Initialize empty matrix</span>
+    <span class="n">file_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files_list</span><span class="p">]</span>
+
+    <span class="c1"># Initialize matrix with float type instead of default</span>
+    <span class="n">overlap_matrix</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">file_names</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">file_names</span><span class="p">)</span>
+
+    <span class="c1"># Fill matrix with explicit type conversion</span>
+    <span class="k">for</span> <span class="n">file1</span><span class="p">,</span> <span class="n">file2</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">overlap_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">file1</span><span class="p">,</span> <span class="n">file2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">overlap_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">file2</span><span class="p">,</span> <span class="n">file1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="c1"># Create heatmap</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">overlap_matrix</span><span class="p">,</span>
+                <span class="n">annot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;YlOrRd&#39;</span><span class="p">,</span>
+                <span class="n">square</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">cbar_kws</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;Overlap %&#39;</span><span class="p">})</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;TCR Match Overlap Percentages (top_</span><span class="si">{</span><span class="n">top_k</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">rotation</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Adjust layout to prevent label cutoff</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="c1"># Save plot</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;match_overlap_heatmap_top</span><span class="si">{</span><span class="n">top_k</span><span class="si">}</span><span class="s1">.pdf&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Heatmap saved to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">overlap_matrix</span><span class="p">,</span> <span class="n">file_names</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Minuk Ma.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

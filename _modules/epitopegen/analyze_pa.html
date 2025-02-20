@@ -1,0 +1,717 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>epitopegen.analyze_pa &mdash; EpitopeGen 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://ding-group.github.io/EpitopeGen/_modules/epitopegen/analyze_pa.html" />
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EpitopeGen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EpitopeGen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">epitopegen.analyze_pa</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for epitopegen.analyze_pa</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">statsmodels.stats.multitest</span><span class="w"> </span><span class="kn">import</span> <span class="n">multipletests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">fisher_exact</span>
+
+
+<div class="viewcode-block" id="PARatioAnalyzer"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_pa.PARatioAnalyzer">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">PARatioAnalyzer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for performing Phenotype-Association Ratio analysis.</span>
+
+<span class="sd">    This class provides functionality to analyze Phenotype-Association (PA) ratios</span>
+<span class="sd">    across different cell types and patterns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cell_types</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">pattern_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">pattern_descriptions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+        <span class="n">patterns_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;analysis/PA_ratio_analysis&quot;</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize PA ratio analyzer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cell_types: List of cell types to analyze.</span>
+<span class="sd">            pattern_names: List of pattern names to process.</span>
+<span class="sd">            pattern_descriptions: Dictionary mapping pattern names to their descriptions.</span>
+<span class="sd">            patterns_dict: Optional list of lists containing site patterns to analyze.</span>
+<span class="sd">                Defaults to None.</span>
+<span class="sd">            output_dir: Directory path to save analysis results.</span>
+<span class="sd">                Defaults to &quot;analysis/PA_ratio_analysis&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span> <span class="o">=</span> <span class="n">cell_types</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span> <span class="o">=</span> <span class="n">pattern_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern_descriptions</span> <span class="o">=</span> <span class="n">pattern_descriptions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patterns_dict</span> <span class="o">=</span> <span class="n">patterns_dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+
+        <span class="c1"># Create output directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Validate inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_inputs</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate input parameters.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If any of the required input parameters (cell_types,</span>
+<span class="sd">                pattern_names, or pattern_descriptions) is empty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cell_types cannot be empty&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;pattern_names cannot be empty&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_descriptions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;pattern_descriptions cannot be empty&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PARatioAnalyzer.calculate_pa_ratio_with_stats"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_pa_ratio_with_stats</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">reference_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">match_columns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate PA ratio and perform statistical comparison with reference data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: DataFrame containing the current pattern data.</span>
+<span class="sd">            reference_data: DataFrame containing the reference pattern data</span>
+<span class="sd">                (naive/healthy).</span>
+<span class="sd">            match_columns: List of column names to consider for matching.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing:</span>
+<span class="sd">                - ratio (float): The calculated PA ratio</span>
+<span class="sd">                - p_value (float): P-value from Fisher&#39;s exact test</span>
+<span class="sd">                - PA_count (int): Number of PA cells</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            If match_columns is None, defaults to [&#39;match_0&#39;, &#39;match_1&#39;, ..., &#39;match_9&#39;].</span>
+<span class="sd">            Returns (nan, nan, 0) if no matching columns are found in the data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">match_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">match_columns</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+
+        <span class="n">existing_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">match_columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">existing_columns</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="mi">0</span>
+
+        <span class="c1"># Calculate counts for current pattern</span>
+        <span class="n">PA_current</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">existing_columns</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">total_current</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Calculate counts for reference pattern</span>
+        <span class="n">PA_ref</span> <span class="o">=</span> <span class="n">reference_data</span><span class="p">[</span><span class="n">existing_columns</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">total_ref</span> <span class="o">=</span> <span class="n">reference_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Calculate ratio</span>
+        <span class="n">ratio</span> <span class="o">=</span> <span class="n">PA_current</span> <span class="o">/</span> <span class="n">total_current</span> <span class="k">if</span> <span class="n">total_current</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="c1"># Perform Fisher&#39;s exact test</span>
+        <span class="k">if</span> <span class="n">total_current</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">total_ref</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">contingency_table</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">PA_current</span><span class="p">,</span> <span class="n">total_current</span> <span class="o">-</span> <span class="n">PA_current</span><span class="p">],</span>
+                <span class="p">[</span><span class="n">PA_ref</span><span class="p">,</span> <span class="n">total_ref</span> <span class="o">-</span> <span class="n">PA_ref</span><span class="p">]</span>
+            <span class="p">]</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">fisher_exact</span><span class="p">(</span><span class="n">contingency_table</span><span class="p">,</span> <span class="n">alternative</span><span class="o">=</span><span class="s1">&#39;greater&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">return</span> <span class="n">ratio</span><span class="p">,</span> <span class="n">p_value</span><span class="p">,</span> <span class="n">PA_current</span></div>
+
+<div class="viewcode-block" id="PARatioAnalyzer.analyze"><a class="viewcode-back" href="../../modules.html#epitopegen.analyze_pa.PARatioAnalyzer.analyze">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">analyze</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mdata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">per_patient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform PA ratio analysis on gene expression data.</span>
+
+<span class="sd">        Analyzes Phenotype-Association ratios across different patterns and cell types,</span>
+<span class="sd">        calculating statistics and generating visualizations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mdata: Dictionary containing gene expression data, with a required &#39;gex&#39;</span>
+<span class="sd">                key containing observation data.</span>
+<span class="sd">            top_k: Number of top matches to consider in the analysis.</span>
+<span class="sd">                Defaults to 8.</span>
+<span class="sd">            per_patient: Whether to perform analysis separately for each patient.</span>
+<span class="sd">                Defaults to False.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A dictionary with keys as generation numbers (1 to top_k) and values</span>
+<span class="sd">                as dictionaries containing:</span>
+<span class="sd">                - &#39;ratios&#39;: DataFrame of PA ratios</span>
+<span class="sd">                - &#39;p_values&#39;: DataFrame of corrected p-values</span>
+<span class="sd">                - &#39;num_cells&#39;: DataFrame of cell counts</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            The function performs multiple testing correction on p-values and</span>
+<span class="sd">            generates visualizations for each pattern group.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preprocess_data</span><span class="p">(</span><span class="n">mdata</span><span class="p">[</span><span class="s1">&#39;gex&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">obs</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">n_gen</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">top_k</span><span class="p">):</span>
+            <span class="c1"># Calculate ratios and stats</span>
+            <span class="n">ratio_df</span><span class="p">,</span> <span class="n">p_value_df</span><span class="p">,</span> <span class="n">num_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_statistics</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">n_gen</span><span class="p">)</span>
+
+            <span class="c1"># Apply multiple testing correction</span>
+            <span class="n">corrected_p_value_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_multiple_testing_correction</span><span class="p">(</span><span class="n">p_value_df</span><span class="p">)</span>
+
+            <span class="c1"># Map pattern names to descriptions</span>
+            <span class="n">ratio_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">ratio_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_descriptions</span><span class="p">)</span>
+            <span class="n">corrected_p_value_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">corrected_p_value_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_descriptions</span><span class="p">)</span>
+
+            <span class="c1"># Create visualizations for each pattern group</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_visualizations</span><span class="p">(</span>
+                <span class="n">ratio_df</span><span class="p">,</span>
+                <span class="n">corrected_p_value_df</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">,</span>
+                <span class="n">n_gen</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Save results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_results</span><span class="p">(</span><span class="n">ratio_df</span><span class="p">,</span> <span class="n">corrected_p_value_df</span><span class="p">,</span> <span class="n">num_df</span><span class="p">,</span> <span class="n">n_gen</span><span class="p">)</span>
+
+            <span class="c1"># Store results for return</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">n_gen</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;ratios&#39;</span><span class="p">:</span> <span class="n">ratio_df</span><span class="p">,</span>
+                <span class="s1">&#39;p_values&#39;</span><span class="p">:</span> <span class="n">corrected_p_value_df</span><span class="p">,</span>
+                <span class="s1">&#39;num_cells&#39;</span><span class="p">:</span> <span class="n">num_df</span>
+            <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">results</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_preprocess_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess the input data for PA ratio analysis.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df: Input DataFrame containing observation data from gene expression</span>
+<span class="sd">                analysis.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: Preprocessed DataFrame ready for PA ratio analysis.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            This is a placeholder method - implement actual preprocessing logic</span>
+<span class="sd">            based on specific requirements.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Implement your preprocessing logic here</span>
+        <span class="c1"># This is a placeholder - replace with actual implementation</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calculate_statistics</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">n_gen</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate PA ratios and statistical measures for all patterns and cell types.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df: Preprocessed DataFrame containing pattern and cell type information.</span>
+<span class="sd">            n_gen: Number of generations/matches to consider in the analysis.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing three DataFrames:</span>
+<span class="sd">                - ratio_df (pd.DataFrame): PA ratios for each pattern-cell type pair</span>
+<span class="sd">                - p_value_df (pd.DataFrame): Statistical p-values for each pair</span>
+<span class="sd">                - num_df (pd.DataFrame): Number of cells for each pair</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            - The function processes each pattern-cell type combination separately</span>
+<span class="sd">            - Uses match columns named as &#39;match_0&#39;, &#39;match_1&#39;, etc. up to n_gen-1</span>
+<span class="sd">            - All resulting DataFrames have patterns as index and cell types as columns</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">aggregated_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">p_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">num_data</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">:</span>
+            <span class="n">ratio_row</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">num_row</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p_value_row</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">cell_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">:</span>
+                <span class="c1"># Get data for current pattern and cell type</span>
+                <span class="n">df_filtered</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">patterns_dict</span><span class="p">[</span><span class="n">pattern</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;ident&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">cell_type</span><span class="p">)]</span>
+                <span class="c1"># Get &#39;All&#39; pattern data for this cell type</span>
+                <span class="n">df_all</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;ident&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">cell_type</span><span class="p">]</span>
+
+                <span class="n">match_cols</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;match_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_gen</span><span class="p">)]</span>
+                <span class="n">ratio</span><span class="p">,</span> <span class="n">p_value</span><span class="p">,</span> <span class="n">num_cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_pa_ratio_with_stats</span><span class="p">(</span>
+                    <span class="n">df_filtered</span><span class="p">,</span> <span class="n">df_all</span><span class="p">,</span> <span class="n">match_cols</span>
+                <span class="p">)</span>
+
+                <span class="n">ratio_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ratio</span><span class="p">)</span>
+                <span class="n">p_value_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p_value</span><span class="p">)</span>
+                <span class="n">num_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_cells</span><span class="p">)</span>
+
+            <span class="n">aggregated_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ratio_row</span><span class="p">)</span>
+            <span class="n">p_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p_value_row</span><span class="p">)</span>
+            <span class="n">num_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_row</span><span class="p">)</span>
+
+        <span class="c1"># Create DataFrames</span>
+        <span class="n">ratio_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">aggregated_data</span><span class="p">,</span>
+                              <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">,</span>
+                              <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">)</span>
+        <span class="n">p_value_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">p_values</span><span class="p">,</span>
+                                <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">,</span>
+                                <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">)</span>
+        <span class="n">num_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">num_data</span><span class="p">,</span>
+                            <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">,</span>
+                            <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ratio_df</span><span class="p">,</span> <span class="n">p_value_df</span><span class="p">,</span> <span class="n">num_df</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_multiple_testing_correction</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply FDR-BH multiple testing correction to p-values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            p_value_df: DataFrame containing p-values with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: DataFrame with corrected p-values, maintaining the same</span>
+<span class="sd">                structure as input (patterns as index, cell types as columns).</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            - Uses Benjamini-Hochberg FDR correction method</span>
+<span class="sd">            - Applies correction separately for each cell type</span>
+<span class="sd">            - Maintains original pattern and cell type ordering</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">corrected_p_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">p_value_df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">corrected</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">multipletests</span><span class="p">(</span>
+                <span class="n">p_value_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;fdr_bh&#39;</span>
+            <span class="p">)</span>
+            <span class="n">corrected_p_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">corrected</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">corrected_p_values</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cell_types</span><span class="p">,</span>
+            <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pattern_names</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_visualizations</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ratio_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">pattern_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">n_gen</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create visualization plots for PA ratio analysis results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ratio_df: DataFrame containing PA ratios with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+<span class="sd">            p_value_df: DataFrame containing corrected p-values with same structure</span>
+<span class="sd">                as ratio_df.</span>
+<span class="sd">            pattern_names: List of pattern names to include in visualizations.</span>
+<span class="sd">            n_gen: Number of generations/matches used in the analysis.</span>
+<span class="sd">                Used for output file naming.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Saves the generated plots to the output directory with filename</span>
+<span class="sd">            format &#39;PA_ratio_k{n_gen}.pdf&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create bar plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_pa_ratio_bar_plot</span><span class="p">(</span>
+            <span class="n">ratio_df</span><span class="p">,</span>
+            <span class="n">p_value_df</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;PA Ratio&#39;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;PA_ratio_k</span><span class="si">{</span><span class="n">n_gen</span><span class="si">}</span><span class="s1">.pdf&#39;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_pa_ratio_bar_plot</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a bar plot of PA ratios with significance markers.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: DataFrame containing PA ratios with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+<span class="sd">            p_value_df: DataFrame containing p-values with same structure as data.</span>
+<span class="sd">            title: Title for the plot.</span>
+<span class="sd">            output_path: Path object specifying where to save the plot.</span>
+<span class="sd">            alpha: Significance threshold for marking significant results.</span>
+<span class="sd">                Defaults to 0.05.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            - Melts the input data for plotting with patterns on x-axis and</span>
+<span class="sd">              different cell types as grouped bars</span>
+<span class="sd">            - Adds significance markers (*) for results where p &lt; alpha</span>
+<span class="sd">            - Customizes plot appearance including colors, labels, and legend</span>
+<span class="sd">            - Saves the plot to the specified output path</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pattern_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="c1"># Prepare data for plotting</span>
+        <span class="n">melted_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span>
+            <span class="n">id_vars</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span>
+            <span class="n">var_name</span><span class="o">=</span><span class="s1">&#39;Cell Type&#39;</span><span class="p">,</span>
+            <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;PA Ratio&#39;</span>
+        <span class="p">)</span>
+        <span class="n">melted_data</span> <span class="o">=</span> <span class="n">melted_data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;index&#39;</span><span class="p">:</span> <span class="s1">&#39;Pattern&#39;</span><span class="p">})</span>
+
+        <span class="c1"># Create and customize plot</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_bar_plot</span><span class="p">(</span><span class="n">melted_data</span><span class="p">)</span>
+
+        <span class="c1"># Plot bars and add significance markers</span>
+        <span class="n">bar_positions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_bars</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">melted_data</span><span class="p">,</span> <span class="n">pattern_names</span><span class="p">,</span> <span class="n">p_value_df</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+
+        <span class="c1"># Customize plot appearance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_customize_bar_plot</span><span class="p">(</span>
+            <span class="n">ax</span><span class="p">,</span>
+            <span class="n">title</span><span class="p">,</span>
+            <span class="n">melted_data</span><span class="p">,</span>
+            <span class="n">pattern_names</span><span class="p">,</span>
+            <span class="n">bar_positions</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Save plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pdf&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_setup_bar_plot</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">melted_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">plt</span><span class="o">.</span><span class="n">Figure</span><span class="p">,</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up the basic figure and axes for the PA ratio bar plot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            melted_data: DataFrame in long format containing Pattern, Cell Type,</span>
+<span class="sd">                and PA Ratio columns.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: A tuple containing:</span>
+<span class="sd">                - fig (plt.Figure): The created figure object</span>
+<span class="sd">                - ax (plt.Axes): The axes object for plotting</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Creates a figure with dimensions 16x7 inches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_plot_bars</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span>
+        <span class="n">melted_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">patterns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot grouped bar chart of PA ratios with significance markers.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax: Matplotlib axes object to plot on.</span>
+<span class="sd">            melted_data: DataFrame in long format containing Pattern, Cell Type,</span>
+<span class="sd">                and PA Ratio columns.</span>
+<span class="sd">            patterns: List of pattern names to include in the plot.</span>
+<span class="sd">            p_value_df: DataFrame containing p-values with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+<span class="sd">            alpha: Significance threshold for marking significant results.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Dictionary mapping pattern names to arrays of bar positions</span>
+<span class="sd">                on the x-axis.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            - Uses a bar width of 0.15 and gap width of 0.02 between bars</span>
+<span class="sd">            - Groups bars by cell type</span>
+<span class="sd">            - Adds black edges to bars for better visibility</span>
+<span class="sd">            - Skips significance markers for &#39;All&#39; pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">bar_width</span> <span class="o">=</span> <span class="mf">0.15</span>
+        <span class="n">gap_width</span> <span class="o">=</span> <span class="mf">0.02</span>
+        <span class="n">cell_types</span> <span class="o">=</span> <span class="n">melted_data</span><span class="p">[</span><span class="s1">&#39;Cell Type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="n">group_width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">patterns</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">bar_width</span> <span class="o">+</span> <span class="n">gap_width</span><span class="p">)</span> <span class="o">-</span> <span class="n">gap_width</span>
+        <span class="n">group_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cell_types</span><span class="p">))</span>
+        <span class="n">bar_positions_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">patterns</span><span class="p">):</span>
+            <span class="n">pattern_data</span> <span class="o">=</span> <span class="n">melted_data</span><span class="p">[</span><span class="n">melted_data</span><span class="p">[</span><span class="s1">&#39;Pattern&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">pattern</span><span class="p">]</span>
+            <span class="n">bar_positions</span> <span class="o">=</span> <span class="n">group_positions</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="p">(</span><span class="n">bar_width</span> <span class="o">+</span> <span class="n">gap_width</span><span class="p">)</span> <span class="o">-</span> <span class="n">group_width</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">bar_width</span> <span class="o">/</span> <span class="mi">2</span>
+
+            <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+                <span class="n">bar_positions</span><span class="p">,</span>
+                <span class="n">pattern_data</span><span class="p">[</span><span class="s1">&#39;PA Ratio&#39;</span><span class="p">],</span>
+                <span class="n">width</span><span class="o">=</span><span class="n">bar_width</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="n">pattern</span><span class="p">,</span>
+                <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span>
+                <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span>
+            <span class="p">)</span>
+
+            <span class="n">bar_positions_dict</span><span class="p">[</span><span class="n">pattern</span><span class="p">]</span> <span class="o">=</span> <span class="n">bar_positions</span>
+
+            <span class="c1"># Add significance markers</span>
+            <span class="k">if</span> <span class="n">pattern</span> <span class="o">!=</span> <span class="s1">&#39;All&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_significance_markers</span><span class="p">(</span>
+                    <span class="n">ax</span><span class="p">,</span>
+                    <span class="n">pattern</span><span class="p">,</span>
+                    <span class="n">cell_types</span><span class="p">,</span>
+                    <span class="n">bar_positions</span><span class="p">,</span>
+                    <span class="n">pattern_data</span><span class="p">,</span>
+                    <span class="n">p_value_df</span><span class="p">,</span>
+                    <span class="n">alpha</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">bar_positions_dict</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_significance_markers</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span>
+        <span class="n">pattern</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">cell_types</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">bar_positions</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">pattern_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add significance markers above bars based on p-values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax: Matplotlib axes object to add markers to.</span>
+<span class="sd">            pattern: Name of the current pattern.</span>
+<span class="sd">            cell_types: Array of cell type names.</span>
+<span class="sd">            bar_positions: Array of x-axis positions for the bars.</span>
+<span class="sd">            pattern_data: DataFrame containing PA ratios for the current pattern.</span>
+<span class="sd">            p_value_df: DataFrame containing p-values with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+<span class="sd">            alpha: Significance threshold for marking significant results.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Adds markers based on p-value thresholds:</span>
+<span class="sd">            - &#39;***&#39;: p &lt; 0.001</span>
+<span class="sd">            - &#39;**&#39;: p &lt; 0.01</span>
+<span class="sd">            - &#39;*&#39;: p &lt; 0.05</span>
+<span class="sd">            Only adds markers for significant results (p &lt; alpha)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">cell_type</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cell_types</span><span class="p">):</span>
+            <span class="n">p_value</span> <span class="o">=</span> <span class="n">p_value_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">pattern</span><span class="p">,</span> <span class="n">cell_type</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p_value</span><span class="p">)</span> <span class="ow">and</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">alpha</span><span class="p">:</span>
+                <span class="n">current_height</span> <span class="o">=</span> <span class="n">pattern_data</span><span class="p">[</span><span class="n">pattern_data</span><span class="p">[</span><span class="s1">&#39;Cell Type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">cell_type</span><span class="p">][</span><span class="s1">&#39;PA Ratio&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">marker</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;***&#39;</span> <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="mf">0.001</span> <span class="k">else</span>
+                    <span class="s1">&#39;**&#39;</span> <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="k">else</span>
+                    <span class="s1">&#39;*&#39;</span>
+                <span class="p">)</span>
+
+                <span class="n">y_pos</span> <span class="o">=</span> <span class="n">current_height</span> <span class="o">+</span> <span class="n">current_height</span> <span class="o">*</span> <span class="mf">0.05</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+                    <span class="n">bar_positions</span><span class="p">[</span><span class="n">j</span><span class="p">],</span>
+                    <span class="n">y_pos</span><span class="p">,</span>
+                    <span class="n">marker</span><span class="p">,</span>
+                    <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span>
+                    <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_customize_bar_plot</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">Axes</span><span class="p">,</span>
+        <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">melted_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">patterns</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">bar_positions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Customize the appearance of the PA ratio bar plot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax: Matplotlib axes object to customize.</span>
+<span class="sd">            title: Title for the plot.</span>
+<span class="sd">            melted_data: DataFrame in long format containing Pattern, Cell Type,</span>
+<span class="sd">                and PA Ratio columns.</span>
+<span class="sd">            patterns: List of pattern names included in the plot.</span>
+<span class="sd">            bar_positions: Dictionary mapping pattern names to arrays of bar positions</span>
+<span class="sd">                on the x-axis.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Customizes the following plot elements:</span>
+<span class="sd">            - Adds labels and title with specified font sizes</span>
+<span class="sd">            - Sets x-axis ticks and rotated labels for cell types</span>
+<span class="sd">            - Adjusts y-axis limit to 120% of maximum PA ratio</span>
+<span class="sd">            - Adds legend with site patterns</span>
+<span class="sd">            - Includes a text box explaining significance markers</span>
+<span class="sd">            - Applies tight layout for better spacing</span>
+
+<span class="sd">        Style Details:</span>
+<span class="sd">            - Font size: 12 for axis labels</span>
+<span class="sd">            - X-tick labels: 45-degree rotation, right-aligned</span>
+<span class="sd">            - Legend: Positioned outside plot on the right</span>
+<span class="sd">            - Significance legend: Positioned at (1.05, 0.5) in axes coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Set labels and title</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Cell Types&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;PA Ratio&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+
+        <span class="c1"># Set x-ticks</span>
+        <span class="n">cell_types</span> <span class="o">=</span> <span class="n">melted_data</span><span class="p">[</span><span class="s1">&#39;Cell Type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="n">group_positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cell_types</span><span class="p">))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">group_positions</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">cell_types</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Set y-axis limit</span>
+        <span class="n">max_ratio</span> <span class="o">=</span> <span class="n">melted_data</span><span class="p">[</span><span class="s1">&#39;PA Ratio&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_ratio</span> <span class="o">*</span> <span class="mf">1.15</span><span class="p">)</span>
+
+        <span class="c1"># Add legend</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Site Patterns&#39;</span><span class="p">,</span>
+            <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Add significance level explanation</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+            <span class="mf">1.05</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span>
+            <span class="s1">&#39;* p &lt; 0.05</span><span class="se">\n</span><span class="s1">** p &lt; 0.01</span><span class="se">\n</span><span class="s1">*** p &lt; 0.001</span><span class="se">\n</span><span class="s1">Compared to All&#39;</span><span class="p">,</span>
+            <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+            <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_results</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ratio_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">p_value_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">num_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">n_gen</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save PA ratio analysis results to CSV files.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ratio_df: DataFrame containing PA ratios with patterns as index and</span>
+<span class="sd">                cell types as columns.</span>
+<span class="sd">            p_value_df: DataFrame containing corrected p-values with same structure</span>
+<span class="sd">                as ratio_df.</span>
+<span class="sd">            num_df: DataFrame containing cell counts with same structure as ratio_df.</span>
+<span class="sd">            n_gen: Number of generations/matches used in the analysis.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Saves three CSV files in the output directory:</span>
+<span class="sd">            - PA_ratio_all_patients_k{n_gen}.csv: Contains PA ratios</span>
+<span class="sd">            - p_value_all_patients_k{n_gen}.csv: Contains corrected p-values</span>
+<span class="sd">            - num_cells_all_patients_k{n_gen}.csv: Contains cell counts</span>
+
+<span class="sd">            All files maintain the same structure with patterns as rows and</span>
+<span class="sd">            cell types as columns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ratio_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;PA_ratio_all_patients_k</span><span class="si">{</span><span class="n">n_gen</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+        <span class="n">p_value_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;p_value_all_patients_k</span><span class="si">{</span><span class="n">n_gen</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span>
+        <span class="n">num_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;num_cells_all_patients_k</span><span class="si">{</span><span class="n">n_gen</span><span class="si">}</span><span class="s1">.csv&#39;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Minuk Ma.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,575 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>epitopegen.inference &mdash; EpitopeGen 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://ding-group.github.io/EpitopeGen/_modules/epitopegen/inference.html" />
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=2389946f"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            EpitopeGen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">EpitopeGen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">epitopegen.inference</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for epitopegen.inference</h1><div class="highlight"><pre>
+<span></span><span class="c1"># package/epitopegen/inference.py</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">zipfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TOKENIZER_PATH</span><span class="p">,</span>
+    <span class="n">MODEL_CHECKPOINTS</span><span class="p">,</span>
+    <span class="n">ZENODO_URL</span><span class="p">,</span>
+    <span class="n">DEFAULT_CHECKPOINT</span><span class="p">,</span>
+    <span class="n">DEFAULT_CACHE_DIR</span>
+<span class="p">)</span>
+
+<div class="viewcode-block" id="EpitopeGenPredictor"><a class="viewcode-back" href="../../modules.html#epitopegen.inference.EpitopeGenPredictor">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">EpitopeGenPredictor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A predictor class for generating epitopes from TCR sequences using a GPT-2 based model.</span>
+
+<span class="sd">    This class handles model initialization, checkpoint management, and prediction generation</span>
+<span class="sd">    for TCR-epitope pairs. It supports multiple checkpoints and automatic downloading of</span>
+<span class="sd">    model weights from Zenodo.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        ZENODO_URL: URL for downloading model checkpoints.</span>
+<span class="sd">        DEFAULT_CHECKPOINT: Name of the default checkpoint to use.</span>
+<span class="sd">        AVAILABLE_CHECKPOINTS: Dictionary mapping checkpoint names to their file paths.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ZENODO_URL</span> <span class="o">=</span> <span class="n">ZENODO_URL</span>
+    <span class="n">DEFAULT_CHECKPOINT</span> <span class="o">=</span> <span class="n">DEFAULT_CHECKPOINT</span>
+    <span class="n">AVAILABLE_CHECKPOINTS</span> <span class="o">=</span> <span class="n">MODEL_CHECKPOINTS</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">checkpoint_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">model_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gpt2-small&quot;</span><span class="p">,</span>
+        <span class="n">tokenizer_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Changed default</span>
+        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">special_token_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the epitope generator predictor with specified parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_path: Path to model checkpoint directory or checkpoint name (e.g., &#39;ckpt1&#39;).</span>
+<span class="sd">                If None, uses the default checkpoint &#39;ckpt3&#39;.</span>
+<span class="sd">            model_path: Base model architecture path to use (default: &quot;gpt2-small&quot;).</span>
+<span class="sd">            tokenizer_path: Path to custom tokenizer. If None, uses the package&#39;s built-in tokenizer.</span>
+<span class="sd">            device: Device to run inference on (&#39;cuda&#39;, &#39;cpu&#39;, or None for auto-detection).</span>
+<span class="sd">            special_token_id: Special token ID used as separator between input and output sequences</span>
+<span class="sd">                (default: 2).</span>
+<span class="sd">            batch_size: Number of sequences to process simultaneously during inference</span>
+<span class="sd">                (default: 32).</span>
+<span class="sd">            cache_dir: Directory to store downloaded checkpoints. If None, uses</span>
+<span class="sd">                ~/.cache/epitopegen.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The model will automatically download checkpoints from Zenodo if they&#39;re not</span>
+<span class="sd">            found in the cache directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span> <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span> <span class="o">=</span> <span class="n">special_token_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="ow">or</span> <span class="n">DEFAULT_CACHE_DIR</span>
+
+        <span class="c1"># Use package&#39;s tokenizer by default</span>
+        <span class="n">tokenizer_path</span> <span class="o">=</span> <span class="n">tokenizer_path</span> <span class="ow">or</span> <span class="n">TOKENIZER_PATH</span>
+
+        <span class="c1"># Ensure cache directory exists</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Handle checkpoint path</span>
+        <span class="k">if</span> <span class="n">checkpoint_path</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">checkpoint_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">AVAILABLE_CHECKPOINTS</span><span class="p">:</span>
+            <span class="n">ckpt_name</span> <span class="o">=</span> <span class="n">checkpoint_path</span> <span class="ow">or</span> <span class="s2">&quot;ckpt3&quot;</span>  <span class="c1"># default to ckpt3</span>
+            <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_checkpoint</span><span class="p">(</span><span class="n">ckpt_name</span><span class="p">)</span>
+
+        <span class="c1"># Rest of initialization remains the same</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">tokenizer_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">add_special_tokens</span><span class="p">({</span><span class="s1">&#39;pad_token&#39;</span><span class="p">:</span> <span class="s1">&#39;[PAD]&#39;</span><span class="p">})</span>
+
+        <span class="n">config_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tokenizer_path</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;GPT2Config_small.pkl&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="n">config</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_download_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Downloads a file from a URL with a progress bar.</span>
+
+<span class="sd">        Downloads a file using streaming to support large files while displaying</span>
+<span class="sd">        a progress bar using tqdm.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url: The URL of the file to download.</span>
+<span class="sd">            dest_path: The local path where the downloaded file will be saved.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Uses 1024 byte chunks for streaming and displays progress in</span>
+<span class="sd">            binary units (iB).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">,</span> <span class="n">tqdm</span><span class="p">(</span>
+            <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Downloading checkpoints&quot;</span><span class="p">,</span>
+            <span class="n">total</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span>
+            <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;iB&#39;</span><span class="p">,</span>
+            <span class="n">unit_scale</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">pbar</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">):</span>
+                <span class="n">size</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensures the specified model checkpoint is available locally.</span>
+
+<span class="sd">        Checks if the checkpoint exists in the cache directory. If not, downloads</span>
+<span class="sd">        the checkpoint archive from Zenodo and extracts it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            checkpoint_name: Name of the checkpoint to ensure (e.g., &#39;ckpt1&#39;).</span>
+<span class="sd">                Must be a key in AVAILABLE_CHECKPOINTS.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The full path to the local checkpoint file.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            RuntimeError: If the checkpoint file is not found after extraction.</span>
+<span class="sd">            KeyError: If checkpoint_name is not in AVAILABLE_CHECKPOINTS.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Downloads are stored in a zip file named &quot;checkpoints.zip&quot; in the</span>
+<span class="sd">            cache directory before extraction.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">AVAILABLE_CHECKPOINTS</span><span class="p">[</span><span class="n">checkpoint_name</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">):</span>
+            <span class="n">zip_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">,</span> <span class="s2">&quot;checkpoints.zip&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Download if not already present</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">zip_path</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading checkpoints from Zenodo...&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_download_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZENODO_URL</span><span class="p">,</span> <span class="n">zip_path</span><span class="p">)</span>
+
+            <span class="c1"># Extract</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Extracting checkpoints...&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">zip_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_ref</span><span class="p">:</span>
+                <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache_dir</span><span class="p">)</span>
+
+            <span class="c1"># Verify checkpoint exists after extraction</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Checkpoint </span><span class="si">{</span><span class="n">checkpoint_path</span><span class="si">}</span><span class="s2"> not found after extraction&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">checkpoint_path</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calculate_statistics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates useful statistics from prediction results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            results_df: A pandas DataFrame containing TCR sequences and their predicted epitopes.</span>
+<span class="sd">                Expected to have a &#39;tcr&#39; column and multiple prediction columns.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A dictionary containing the following statistics:</span>
+<span class="sd">                - num_tcrs: Total number of TCR sequences analyzed</span>
+<span class="sd">                - num_predictions_per_tcr: Number of predictions made per TCR</span>
+<span class="sd">                - avg_tcr_length: Average length of TCR sequences</span>
+<span class="sd">                - avg_epitope_length: Average length of predicted epitopes</span>
+<span class="sd">                - unique_epitopes: Number of unique epitopes predicted</span>
+<span class="sd">                - most_common_epitopes: Dictionary of the 5 most frequently predicted epitopes and their counts</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;num_tcrs&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">results_df</span><span class="p">),</span>
+            <span class="s2">&quot;num_predictions_per_tcr&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">results_df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># -1 for tcr column</span>
+            <span class="s2">&quot;avg_tcr_length&quot;</span><span class="p">:</span> <span class="n">results_df</span><span class="p">[</span><span class="s1">&#39;tcr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">len</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;avg_epitope_length&quot;</span><span class="p">:</span> <span class="n">results_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">len</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+            <span class="s2">&quot;unique_epitopes&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">results_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">ravel</span><span class="p">())),</span>
+            <span class="s2">&quot;most_common_epitopes&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">results_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">stats</span>
+
+<div class="viewcode-block" id="EpitopeGenPredictor.predict_all"><a class="viewcode-back" href="../../modules.html#epitopegen.inference.EpitopeGenPredictor.predict_all">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">predict_all</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tcr_sequences</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">models</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># List of checkpoint names to use</span>
+        <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span>
+        <span class="n">top_p</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>
+        <span class="n">use_attention_mask</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Runs predictions using multiple model checkpoints.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tcr_sequences: List of TCR amino acid sequences to generate predictions for.</span>
+<span class="sd">            output_dir: Directory path where prediction results will be saved.</span>
+<span class="sd">            models: List of checkpoint names to use. If None, uses all available checkpoints.</span>
+<span class="sd">            top_k: Number of most likely tokens to consider for sampling (default: 50).</span>
+<span class="sd">            temperature: Sampling temperature, higher values increase diversity (default: 0.7).</span>
+<span class="sd">            top_p: Nucleus sampling probability threshold (default: 0.95).</span>
+<span class="sd">            use_attention_mask: Whether to use attention masking during generation (default: False).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict[str, pd.DataFrame]: Dictionary mapping checkpoint names to prediction DataFrames.</span>
+<span class="sd">                Each DataFrame contains the input TCR sequences and their predicted epitopes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="n">models</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">AVAILABLE_CHECKPOINTS</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Running Multi-Model Predictions ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tcr_sequences</span><span class="p">)</span><span class="si">}</span><span class="s2"> TCRs&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Using </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">)</span><span class="si">}</span><span class="s2"> model checkpoints&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">ckpt_name</span> <span class="ow">in</span> <span class="n">models</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Processing checkpoint: </span><span class="si">{</span><span class="n">ckpt_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Load new checkpoint</span>
+            <span class="n">checkpoint_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_checkpoint</span><span class="p">(</span><span class="n">ckpt_name</span><span class="p">)</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">checkpoint_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+
+            <span class="c1"># Run prediction</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;predictions_</span><span class="si">{</span><span class="n">ckpt_name</span><span class="si">}</span><span class="s2">.csv&quot;</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">ckpt_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                <span class="n">tcr_sequences</span><span class="p">,</span>
+                <span class="n">output_path</span><span class="o">=</span><span class="n">output_path</span><span class="p">,</span>
+                <span class="n">top_k</span><span class="o">=</span><span class="n">top_k</span><span class="p">,</span>
+                <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+                <span class="n">top_p</span><span class="o">=</span><span class="n">top_p</span><span class="p">,</span>
+                <span class="n">use_attention_mask</span><span class="o">=</span><span class="n">use_attention_mask</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span></div>
+
+<div class="viewcode-block" id="EpitopeGenPredictor.predict"><a class="viewcode-back" href="../../modules.html#epitopegen.inference.EpitopeGenPredictor.predict">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tcr_sequences</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+                <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">top_p</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">use_attention_mask</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generates epitope predictions for a list of TCR sequences.</span>
+
+<span class="sd">        A convenience wrapper around predict_from_df that accepts a list of TCR sequences</span>
+<span class="sd">        instead of a DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tcr_sequences: List of TCR amino acid sequences to generate predictions for.</span>
+<span class="sd">            output_path: Path to save the prediction results CSV. If None, results are</span>
+<span class="sd">                only returned as DataFrame.</span>
+<span class="sd">            top_k: Number of epitope predictions to generate per TCR sequence (default: 50).</span>
+<span class="sd">                Note: This is not the top-k parameter used in top-k top-p sampling.</span>
+<span class="sd">            temperature: Sampling temperature for generation. Higher values increase diversity</span>
+<span class="sd">                (default: 0.7).</span>
+<span class="sd">            top_p: Nucleus sampling probability threshold (default: 0.95).</span>
+<span class="sd">            use_attention_mask: Whether to use attention masking during generation</span>
+<span class="sd">                (default: False).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: DataFrame containing TCR sequences and their predicted epitopes.</span>
+<span class="sd">                Columns are [&#39;tcr&#39;, &#39;pred_0&#39;, &#39;pred_1&#39;, ..., &#39;pred_{top_k-1}&#39;].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Prepare input data</span>
+        <span class="n">input_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+            <span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="n">tcr_sequences</span><span class="p">,</span>
+            <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;AAAAA&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tcr_sequences</span><span class="p">)</span>  <span class="c1"># Placeholder label</span>
+        <span class="p">})</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict_from_df</span><span class="p">(</span><span class="n">input_data</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">top_k</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">top_p</span><span class="p">,</span> <span class="n">use_attention_mask</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EpitopeGenPredictor.predict_from_df"><a class="viewcode-back" href="../../modules.html#epitopegen.inference.EpitopeGenPredictor.predict_from_df">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">predict_from_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">top_k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+                       <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">top_p</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">use_attention_mask</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generates epitope predictions from a DataFrame containing TCR sequences.</span>
+
+<span class="sd">        Main prediction method that processes TCR sequences in batches and generates</span>
+<span class="sd">        multiple epitope predictions for each sequence using the loaded model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df: DataFrame containing TCR sequences in a &#39;text&#39; column.</span>
+<span class="sd">            output_path: Path to save the prediction results CSV. If None, results are</span>
+<span class="sd">                only returned as DataFrame.</span>
+<span class="sd">            top_k: Number of epitope predictions to generate per TCR sequence (default: 50).</span>
+<span class="sd">            temperature: Sampling temperature for text generation. Higher values increase</span>
+<span class="sd">                diversity (default: 0.7).</span>
+<span class="sd">            top_p: Nucleus sampling probability threshold (default: 0.95).</span>
+<span class="sd">            use_attention_mask: Whether to use attention masking during generation. Defaults</span>
+<span class="sd">                to False to match training conditions.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame: DataFrame containing TCR sequences and their predicted epitopes.</span>
+<span class="sd">                Columns are [&#39;tcr&#39;, &#39;pred_0&#39;, &#39;pred_1&#39;, ..., &#39;pred_{top_k-1}&#39;].</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The method processes sequences in batches defined by self.batch_size and</span>
+<span class="sd">            prints a detailed summary of the predictions including statistics about</span>
+<span class="sd">            TCR lengths, epitope lengths, and most common predictions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Process in batches</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)):</span>
+            <span class="n">batch_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]</span>
+
+            <span class="c1"># Tokenize</span>
+            <span class="n">tokenized</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">(</span>
+                <span class="n">batch_df</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+                <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;max_length&#39;</span><span class="p">,</span>
+                <span class="n">max_length</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+                <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">encoded</span> <span class="o">=</span> <span class="n">tokenized</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="c1"># Create a tensor of the special token with matching batch size</span>
+            <span class="n">special_token_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">encoded</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">encoded</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="c1"># Concatenate both the encoded input and attention mask (optional) along dimension 1</span>
+            <span class="n">encoded</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">encoded</span><span class="p">,</span> <span class="n">special_token_tensor</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Create attention mask for special token (all ones since we want to attend to it)</span>
+            <span class="k">if</span> <span class="n">use_attention_mask</span><span class="p">:</span>
+                <span class="n">attention_mask</span> <span class="o">=</span> <span class="n">tokenized</span><span class="p">[</span><span class="s1">&#39;attention_mask&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">special_token_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">encoded</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">encoded</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+                <span class="n">attention_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">attention_mask</span><span class="p">,</span> <span class="n">special_token_mask</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">attention_mask</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># Generate predictions</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">set_verbosity_info</span><span class="p">()</span>
+            <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+                <span class="n">generated_sequences</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+                    <span class="n">encoded</span><span class="p">,</span>
+                    <span class="n">attention_mask</span><span class="o">=</span><span class="n">attention_mask</span><span class="p">,</span>  <span class="c1"># should NOT be set</span>
+                    <span class="n">pad_token_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span><span class="p">,</span>  <span class="c1"># should NOT be set to 0</span>
+                    <span class="n">eos_token_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span><span class="p">,</span>
+                    <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+                    <span class="n">num_return_sequences</span><span class="o">=</span><span class="n">top_k</span><span class="p">,</span>
+                    <span class="n">do_sample</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+                    <span class="n">top_k</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+                    <span class="n">top_p</span><span class="o">=</span><span class="n">top_p</span><span class="p">,</span>
+                <span class="p">)</span>
+
+
+            <span class="c1"># Process generated sequences</span>
+            <span class="k">for</span> <span class="n">batch_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">generated_sequences</span><span class="p">)</span> <span class="o">//</span> <span class="n">top_k</span><span class="p">):</span>
+                <span class="n">tcr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decode_tcr</span><span class="p">(</span>
+                    <span class="n">encoded</span><span class="p">[</span><span class="n">batch_idx</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="p">)</span>
+                <span class="n">preds_for_tcr</span> <span class="o">=</span> <span class="p">[</span><span class="n">tcr</span><span class="p">]</span>
+
+                <span class="k">for</span> <span class="n">seq_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">):</span>
+                    <span class="n">gen_seq</span> <span class="o">=</span> <span class="n">generated_sequences</span><span class="p">[</span><span class="n">batch_idx</span> <span class="o">*</span> <span class="n">top_k</span> <span class="o">+</span> <span class="n">seq_idx</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                    <span class="n">special_index</span> <span class="o">=</span> <span class="n">gen_seq</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span><span class="p">)</span>
+                    <span class="n">epi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span>
+                        <span class="n">gen_seq</span><span class="p">[</span><span class="n">special_index</span><span class="p">:],</span>
+                        <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">epi</span><span class="p">:</span>  <span class="c1"># avoid empty predictions</span>
+                        <span class="n">epi</span> <span class="o">=</span> <span class="s2">&quot;GILGFVFTLV&quot;</span>
+                    <span class="n">preds_for_tcr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epi</span><span class="p">)</span>
+
+                <span class="n">predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">preds_for_tcr</span><span class="p">)</span>
+
+        <span class="c1"># Create results DataFrame</span>
+        <span class="n">results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">predictions</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;tcr&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;pred_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">)]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Calculate statistics</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calculate_statistics</span><span class="p">(</span><span class="n">results_df</span><span class="p">)</span>
+
+        <span class="c1"># Save predictions if output path provided</span>
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">results_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;output_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+
+        <span class="c1"># Print informative summary</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== epitopegen Prediction Summary ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Processed </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;num_tcrs&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> TCR sequences&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Generated </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;num_predictions_per_tcr&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> predictions per TCR&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Average TCR length: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;avg_tcr_length&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Average epitope length: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;avg_epitope_length&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;• Generated </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;unique_epitopes&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> unique epitopes&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Most common predicted epitopes:&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">epi</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;most_common_epitopes&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">epi</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> times&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">output_path</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">• Results saved to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=============================&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results_df</span></div>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_trim_sequences</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Trims input sequences to contain only the TCR part and extracts labels.</span>
+
+<span class="sd">        Processes tokenized sequences by finding the special token that separates TCR</span>
+<span class="sd">        from epitope sequences. Trims sequences to include only the TCR part (up to</span>
+<span class="sd">        and including the special token) and extracts the epitope labels.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_ids: Tensor of tokenized sequences containing both TCR and epitope parts,</span>
+<span class="sd">                separated by special_token_id.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">                - torch.Tensor: Stack of trimmed sequences containing only TCR parts</span>
+<span class="sd">                  (including special token).</span>
+<span class="sd">                - list[torch.Tensor]: List of extracted epitope label sequences (everything</span>
+<span class="sd">                  after special token, before padding).</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Only sequences with length &lt;= 13 tokens are included in the output.</span>
+<span class="sd">            Padding tokens (0) are removed from the extracted labels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">trimmed_ids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">sequence</span> <span class="ow">in</span> <span class="n">input_ids</span><span class="p">:</span>
+            <span class="n">special_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">sequence</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">special_token_id</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">as_tuple</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">special_index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">end_index</span> <span class="o">=</span> <span class="n">special_index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">seq</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">[:</span><span class="n">end_index</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">13</span><span class="p">:</span>
+                    <span class="n">trimmed_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+
+                    <span class="n">label</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">[</span><span class="n">end_index</span><span class="p">:]</span>
+                    <span class="n">zero_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">as_tuple</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">zero_index</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="p">[:</span><span class="n">zero_index</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                    <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">trimmed_ids</span><span class="p">),</span> <span class="n">labels</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_decode_tcr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_id_tr</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Decodes a tokenized TCR sequence back to amino acid sequence.</span>
+
+<span class="sd">        Converts a list of token IDs back to a TCR amino acid sequence, handling</span>
+<span class="sd">        padding tokens and removing spaces from the decoded sequence.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_id_tr: List of token IDs representing a TCR sequence.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Decoded TCR amino acid sequence with spaces removed.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Decoding stops at the first padding token (0) if present.</span>
+<span class="sd">            All spaces are removed from the final sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ind_of_0</span> <span class="o">=</span> <span class="n">input_id_tr</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">ind_of_0</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_id_tr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="n">tcr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">input_id_tr</span><span class="p">[:</span><span class="n">ind_of_0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">tcr</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Minuk Ma.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
