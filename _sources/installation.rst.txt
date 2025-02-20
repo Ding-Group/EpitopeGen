@@ -11,6 +11,6 @@ Or install from source:
 
 .. code-block:: bash
 
-   git clone https://github.com/Regaler/EpitopeGen.git
+   git clone https://github.com/Ding-Group/EpitopeGen.git
    cd EpitopeGen/package
    pip install -e .

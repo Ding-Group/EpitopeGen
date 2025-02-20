@@ -80,6 +80,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#analysis-tools">Analysis Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer.analyze"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer.analyze()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer.calculate_pa_ratio_with_stats()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_deg.DEGAnalyzer"><code class="docutils literal notranslate"><span class="pre">DEGAnalyzer</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_deg.DEGAnalyzer.genes_of_interest"><code class="docutils literal notranslate"><span class="pre">DEGAnalyzer.genes_of_interest</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_deg.DEGAnalyzer.gene_groups"><code class="docutils literal notranslate"><span class="pre">DEGAnalyzer.gene_groups</span></code></a></li>
@@ -93,9 +98,27 @@
 <li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_deg.DEGAnalyzer.prepare_data"><code class="docutils literal notranslate"><span class="pre">DEGAnalyzer.prepare_data()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer.analyze"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer.analyze()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats"><code class="docutils literal notranslate"><span class="pre">PARatioAnalyzer.calculate_pa_ratio_with_stats()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_pre.PRERatioAnalyzer"><code class="docutils literal notranslate"><span class="pre">PRERatioAnalyzer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pre.PRERatioAnalyzer.analyze"><code class="docutils literal notranslate"><span class="pre">PRERatioAnalyzer.analyze()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_pre.PRERatioAnalyzer.calculate_expansion_ratio"><code class="docutils literal notranslate"><span class="pre">PRERatioAnalyzer.calculate_expansion_ratio()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_ce.TCRUMAPVisualizer"><code class="docutils literal notranslate"><span class="pre">TCRUMAPVisualizer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_ce.TCRUMAPVisualizer.analyze_clone_sizes"><code class="docutils literal notranslate"><span class="pre">TCRUMAPVisualizer.analyze_clone_sizes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_ce.TCRUMAPVisualizer.visualize_umap"><code class="docutils literal notranslate"><span class="pre">TCRUMAPVisualizer.visualize_umap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_ce.calculate_sequence_distance"><code class="docutils literal notranslate"><span class="pre">calculate_sequence_distance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_antigen.AntigenAnalyzer"><code class="docutils literal notranslate"><span class="pre">AntigenAnalyzer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_antigen.AntigenAnalyzer.analyze"><code class="docutils literal notranslate"><span class="pre">AntigenAnalyzer.analyze()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_antigen.CoronavirusProteinStandardizer"><code class="docutils literal notranslate"><span class="pre">CoronavirusProteinStandardizer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_antigen.CoronavirusProteinStandardizer.standardize"><code class="docutils literal notranslate"><span class="pre">CoronavirusProteinStandardizer.standardize()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#epitopegen.analyze_antigen.ProteinNameStandardizer"><code class="docutils literal notranslate"><span class="pre">ProteinNameStandardizer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#epitopegen.analyze_antigen.ProteinNameStandardizer.standardize"><code class="docutils literal notranslate"><span class="pre">ProteinNameStandardizer.standardize()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -570,6 +593,84 @@ minus 1 (default: None).</p></li>
 </section>
 <section id="analysis-tools">
 <h2>Analysis Tools<a class="headerlink" href="#analysis-tools" title="Permalink to this heading"></a></h2>
+<span class="target" id="module-epitopegen.analyze_pa"></span><dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_pa.</span></span><span class="sig-name descname"><span class="pre">PARatioAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_descriptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patterns_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'analysis/PA_ratio_analysis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for performing Phenotype-Association Ratio analysis.</p>
+<p>This class provides functionality to analyze Phenotype-Association (PA) ratios
+across different cell types and patterns.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer.analyze">
+<span class="sig-name descname"><span class="pre">analyze</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">per_patient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer.analyze"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer.analyze" title="Permalink to this definition"></a></dt>
+<dd><p>Perform PA ratio analysis on gene expression data.</p>
+<p>Analyzes Phenotype-Association ratios across different patterns and cell types,
+calculating statistics and generating visualizations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mdata</strong> – Dictionary containing gene expression data, with a required ‘gex’
+key containing observation data.</p></li>
+<li><p><strong>top_k</strong> – Number of top matches to consider in the analysis.
+Defaults to 8.</p></li>
+<li><p><strong>per_patient</strong> – Whether to perform analysis separately for each patient.
+Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary with keys as generation numbers (1 to top_k) and values</dt><dd><p>as dictionaries containing:
+- ‘ratios’: DataFrame of PA ratios
+- ‘p_values’: DataFrame of corrected p-values
+- ‘num_cells’: DataFrame of cell counts</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function performs multiple testing correction on p-values and
+generates visualizations for each pattern group.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats">
+<span class="sig-name descname"><span class="pre">calculate_pa_ratio_with_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer.calculate_pa_ratio_with_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate PA ratio and perform statistical comparison with reference data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – DataFrame containing the current pattern data.</p></li>
+<li><p><strong>reference_data</strong> – DataFrame containing the reference pattern data
+(naive/healthy).</p></li>
+<li><p><strong>match_columns</strong> – List of column names to consider for matching.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing:</dt><dd><ul class="simple">
+<li><p>ratio (float): The calculated PA ratio</p></li>
+<li><p>p_value (float): P-value from Fisher’s exact test</p></li>
+<li><p>PA_count (int): Number of PA cells</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>If match_columns is None, defaults to [‘match_0’, ‘match_1’, …, ‘match_9’].
+Returns (nan, nan, 0) if no matching columns are found in the data.</p>
+</dd></dl>
+
+</dd></dl>
+
 <span class="target" id="module-epitopegen.analyze_deg"></span><dl class="py class">
 <dt class="sig sig-object py" id="epitopegen.analyze_deg.DEGAnalyzer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_deg.</span></span><span class="sig-name descname"><span class="pre">DEGAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genes_of_interest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['PDCD1',</span> <span class="pre">'CTLA4',</span> <span class="pre">'LAG3',</span> <span class="pre">'HAVCR2',</span> <span class="pre">'TIGIT',</span> <span class="pre">'CD244',</span> <span class="pre">'CD69',</span> <span class="pre">'IL2RA',</span> <span class="pre">'MKI67',</span> <span class="pre">'GZMB',</span> <span class="pre">'PRF1',</span> <span class="pre">'ZAP70',</span> <span class="pre">'LAT',</span> <span class="pre">'LCK',</span> <span class="pre">'IFNG',</span> <span class="pre">'TNF',</span> <span class="pre">'TOX',</span> <span class="pre">'EOMES',</span> <span class="pre">'TBX21',</span> <span class="pre">'SLC2A1',</span> <span class="pre">'PRKAA1',</span> <span class="pre">'HIF1A',</span> <span class="pre">'XBP1',</span> <span class="pre">'CCR7',</span> <span class="pre">'IL7R',</span> <span class="pre">'KLRG1',</span> <span class="pre">'CX3CR1',</span> <span class="pre">'ENTPD1']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene_groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">{'Cytokines':</span> <span class="pre">['IFNG',</span> <span class="pre">'TNF'],</span> <span class="pre">'Cytotoxicity':</span> <span class="pre">['GZMB',</span> <span class="pre">'PRF1'],</span> <span class="pre">'Early</span> <span class="pre">activation':</span> <span class="pre">['CD69',</span> <span class="pre">'IL2RA'],</span> <span class="pre">'Exhaustion</span> <span class="pre">markers':</span> <span class="pre">['PDCD1',</span> <span class="pre">'CTLA4',</span> <span class="pre">'LAG3',</span> <span class="pre">'HAVCR2',</span> <span class="pre">'TIGIT',</span> <span class="pre">'CD244',</span> <span class="pre">'ENTPD1'],</span> <span class="pre">'Metabolic</span> <span class="pre">regulators':</span> <span class="pre">['SLC2A1',</span> <span class="pre">'PRKAA1'],</span> <span class="pre">'Naive/Memory</span> <span class="pre">markers':</span> <span class="pre">['CCR7',</span> <span class="pre">'IL7R'],</span> <span class="pre">'Proliferation':</span> <span class="pre">['MKI67'],</span> <span class="pre">'Stress</span> <span class="pre">response':</span> <span class="pre">['HIF1A',</span> <span class="pre">'XBP1'],</span> <span class="pre">'TCR</span> <span class="pre">signaling':</span> <span class="pre">['ZAP70',</span> <span class="pre">'LAT',</span> <span class="pre">'LCK'],</span> <span class="pre">'Terminal</span> <span class="pre">differentiation':</span> <span class="pre">['KLRG1',</span> <span class="pre">'CX3CR1'],</span> <span class="pre">'Transcription</span> <span class="pre">factors':</span> <span class="pre">['TOX',</span> <span class="pre">'EOMES',</span> <span class="pre">'TBX21']}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patterns_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'results'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_deg.html#DEGAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_deg.DEGAnalyzer" title="Permalink to this definition"></a></dt>
@@ -755,36 +856,37 @@ normalization and log transformation.</p>
 
 </dd></dl>
 
-<span class="target" id="module-epitopegen.analyze_pa"></span><dl class="py class">
-<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_pa.</span></span><span class="sig-name descname"><span class="pre">PARatioAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_descriptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patterns_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'analysis/PA_ratio_analysis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer" title="Permalink to this definition"></a></dt>
+<span class="target" id="module-epitopegen.analyze_pre"></span><dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_pre.PRERatioAnalyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_pre.</span></span><span class="sig-name descname"><span class="pre">PRERatioAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_descriptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patterns_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'analysis/PRE_ratio_analysis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_pre.html#PRERatioAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pre.PRERatioAnalyzer" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class for performing Phenotype-Association Ratio analysis.</p>
-<p>This class provides functionality to analyze Phenotype-Association (PA) ratios
-across different cell types and patterns.</p>
+<p>Class for performing Phenotype Relative Expansion (PRE) ratio analysis.</p>
+<p>This class provides functionality to analyze clonal expansion patterns between
+Phenotype-Associated (PA) and Non-Associated (NA) T cells across different
+cell types and patterns.</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer.analyze">
-<span class="sig-name descname"><span class="pre">analyze</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">per_patient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer.analyze"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer.analyze" title="Permalink to this definition"></a></dt>
-<dd><p>Perform PA ratio analysis on gene expression data.</p>
-<p>Analyzes Phenotype-Association ratios across different patterns and cell types,
-calculating statistics and generating visualizations.</p>
+<dt class="sig sig-object py" id="epitopegen.analyze_pre.PRERatioAnalyzer.analyze">
+<span class="sig-name descname"><span class="pre">analyze</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mdata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">per_patient</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pre.html#PRERatioAnalyzer.analyze"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pre.PRERatioAnalyzer.analyze" title="Permalink to this definition"></a></dt>
+<dd><p>Perform PRE ratio analysis on T cell data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mdata</strong> – Dictionary containing gene expression data, with a required ‘gex’
-key containing observation data.</p></li>
-<li><p><strong>top_k</strong> – Number of top matches to consider in the analysis.
-Defaults to 8.</p></li>
-<li><p><strong>per_patient</strong> – Whether to perform analysis separately for each patient.
-Defaults to False.</p></li>
+<li><p><strong>mdata</strong> – Dictionary containing gene expression data with required ‘gex’ key.</p></li>
+<li><p><strong>top_k</strong> – Number of top matches to consider. Defaults to 1.</p></li>
+<li><p><strong>per_patient</strong> – Whether to perform analysis per patient. Defaults to False.</p></li>
+<li><p><strong>debug</strong> – Whether to include debug information in plots. Defaults to False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><dl class="simple">
-<dt>A dictionary with keys as generation numbers (1 to top_k) and values</dt><dd><p>as dictionaries containing:
-- ‘ratios’: DataFrame of PA ratios
-- ‘p_values’: DataFrame of corrected p-values
-- ‘num_cells’: DataFrame of cell counts</p>
+<dt>Dictionary containing analysis results with keys:</dt><dd><ul class="simple">
+<li><p>’mean_PA’: DataFrame of mean PA clone sizes</p></li>
+<li><p>’mean_NA’: DataFrame of mean NA clone sizes</p></li>
+<li><p>’ratios’: DataFrame of PA/NA ratios</p></li>
+<li><p>’p_values’: DataFrame of corrected p-values</p></li>
+<li><p>’n_PA’: DataFrame of PA clone counts</p></li>
+<li><p>’n_NA’: DataFrame of NA clone counts</p></li>
+</ul>
 </dd>
 </dl>
 </p>
@@ -793,30 +895,28 @@ Defaults to False.</p></li>
 <dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>The function performs multiple testing correction on p-values and
-generates visualizations for each pattern group.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats">
-<span class="sig-name descname"><span class="pre">calculate_pa_ratio_with_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pa.html#PARatioAnalyzer.calculate_pa_ratio_with_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pa.PARatioAnalyzer.calculate_pa_ratio_with_stats" title="Permalink to this definition"></a></dt>
-<dd><p>Calculate PA ratio and perform statistical comparison with reference data.</p>
+<dt class="sig sig-object py" id="epitopegen.analyze_pre.PRERatioAnalyzer.calculate_expansion_ratio">
+<span class="sig-name descname"><span class="pre">calculate_expansion_ratio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_pre.html#PRERatioAnalyzer.calculate_expansion_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_pre.PRERatioAnalyzer.calculate_expansion_ratio" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate expansion ratio between PA and NA cells.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> – DataFrame containing the current pattern data.</p></li>
-<li><p><strong>reference_data</strong> – DataFrame containing the reference pattern data
-(naive/healthy).</p></li>
+<li><p><strong>data</strong> – DataFrame containing match columns and clone size information.</p></li>
 <li><p><strong>match_columns</strong> – List of column names to consider for matching.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><dl class="simple">
 <dt>A tuple containing:</dt><dd><ul class="simple">
-<li><p>ratio (float): The calculated PA ratio</p></li>
-<li><p>p_value (float): P-value from Fisher’s exact test</p></li>
-<li><p>PA_count (int): Number of PA cells</p></li>
+<li><p>mean_PA (float): Mean clone size of PA cells</p></li>
+<li><p>mean_NA (float): Mean clone size of NA cells</p></li>
+<li><p>ratio (float): PA/NA ratio</p></li>
+<li><p>p_value (float): Mann-Whitney U test p-value</p></li>
+<li><p>n_PA (int): Number of PA clones</p></li>
+<li><p>n_NA (int): Number of NA clones</p></li>
 </ul>
 </dd>
 </dl>
@@ -826,9 +926,133 @@ generates visualizations for each pattern group.</p>
 <dd class="field-odd"><p>tuple</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>If match_columns is None, defaults to [‘match_0’, ‘match_1’, …, ‘match_9’].
-Returns (nan, nan, 0) if no matching columns are found in the data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-epitopegen.analyze_ce"></span><dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_ce.TCRUMAPVisualizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_ce.</span></span><span class="sig-name descname"><span class="pre">TCRUMAPVisualizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">patterns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_descriptions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'analysis/tcr_umap'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tcr_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'TRB_1_cdr3'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Who</span> <span class="pre">Ordinal</span> <span class="pre">Scale'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_ce.html#TCRUMAPVisualizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_ce.TCRUMAPVisualizer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for visualizing TCR repertoire data in UMAP space.</p>
+<p>This class provides functionality to analyze and visualize TCR sequences
+using UMAP dimensionality reduction, with options to highlight specific
+patterns and analyze clonal expansion.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_ce.TCRUMAPVisualizer.analyze_clone_sizes">
+<span class="sig-name descname"><span class="pre">analyze_clone_sizes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_pattern</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_ce.html#TCRUMAPVisualizer.analyze_clone_sizes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_ce.TCRUMAPVisualizer.analyze_clone_sizes" title="Permalink to this definition"></a></dt>
+<dd><p>Analyze clone sizes across different patterns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – DataFrame containing TCR data</p></li>
+<li><p><strong>match_columns</strong> – List of column names indicating matches</p></li>
+<li><p><strong>reference_pattern</strong> – Pattern to use as reference for statistical tests</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p>background TCRs</p></li>
+<li><p>primary matched TCRs</p></li>
+<li><p>secondary matched TCRs (if applicable)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple of DataFrames containing statistics for</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_ce.TCRUMAPVisualizer.visualize_umap">
+<span class="sig-name descname"><span class="pre">visualize_umap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_proc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">primary_color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'red'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">secondary_color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'orange'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background_color</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lightgray'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_ce.html#TCRUMAPVisualizer.visualize_umap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_ce.TCRUMAPVisualizer.visualize_umap" title="Permalink to this definition"></a></dt>
+<dd><p>Visualize TCRs in UMAP space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> – AnnData object containing TCR data</p></li>
+<li><p><strong>match_columns</strong> – List of columns indicating matches</p></li>
+<li><p><strong>n_proc</strong> – Number of processes for distance calculation</p></li>
+<li><p><strong>sample_size</strong> – Optional size to downsample to</p></li>
+<li><p><strong>primary_color</strong> – Color for primary matched TCRs</p></li>
+<li><p><strong>secondary_color</strong> – Color for secondary matched TCRs</p></li>
+<li><p><strong>background_color</strong> – Color for background TCRs</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="epitopegen.analyze_ce.calculate_sequence_distance">
+<span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_ce.</span></span><span class="sig-name descname"><span class="pre">calculate_sequence_distance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq_pair</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blosum62_matrix</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_ce.html#calculate_sequence_distance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_ce.calculate_sequence_distance" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate distance between two sequences using BLOSUM62.</p>
+</dd></dl>
+
+<span class="target" id="module-epitopegen.analyze_antigen"></span><dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.AntigenAnalyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_antigen.</span></span><span class="sig-name descname"><span class="pre">AntigenAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition_patterns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protein_colors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">protein_standardizer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#epitopegen.analyze_antigen.ProteinNameStandardizer" title="epitopegen.analyze_antigen.ProteinNameStandardizer"><span class="pre">ProteinNameStandardizer</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'leiden'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_type_mapping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'analysis/antigen_distribution'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#AntigenAnalyzer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.AntigenAnalyzer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.AntigenAnalyzer.analyze">
+<span class="sig-name descname"><span class="pre">analyze</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">consider_cell_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_proteins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'condition'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#AntigenAnalyzer.analyze"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.AntigenAnalyzer.analyze" title="Permalink to this definition"></a></dt>
+<dd><p>Analyze antigen distribution across conditions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> – AnnData object containing the data.</p></li>
+<li><p><strong>top_k</strong> – Number of top matches to consider.</p></li>
+<li><p><strong>consider_cell_type</strong> – Whether to stratify by cell type.</p></li>
+<li><p><strong>top_n_proteins</strong> – Number of top proteins to include in visualization.</p></li>
+<li><p><strong>condition_column</strong> – Column name containing condition values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Processed data with antigen distributions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.CoronavirusProteinStandardizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_antigen.</span></span><span class="sig-name descname"><span class="pre">CoronavirusProteinStandardizer</span></span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#CoronavirusProteinStandardizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.CoronavirusProteinStandardizer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#epitopegen.analyze_antigen.ProteinNameStandardizer" title="epitopegen.analyze_antigen.ProteinNameStandardizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProteinNameStandardizer</span></code></a></p>
+<p>Standardizer for coronavirus protein names.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.CoronavirusProteinStandardizer.standardize">
+<span class="sig-name descname"><span class="pre">standardize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">protein_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#CoronavirusProteinStandardizer.standardize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.CoronavirusProteinStandardizer.standardize" title="Permalink to this definition"></a></dt>
+<dd><p>Standardize coronavirus protein names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>protein_name</strong> – Raw protein name string.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized protein name.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.ProteinNameStandardizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">epitopegen.analyze_antigen.</span></span><span class="sig-name descname"><span class="pre">ProteinNameStandardizer</span></span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#ProteinNameStandardizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.ProteinNameStandardizer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Abstract base class for protein name standardization.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="epitopegen.analyze_antigen.ProteinNameStandardizer.standardize">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">standardize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">protein_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/epitopegen/analyze_antigen.html#ProteinNameStandardizer.standardize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#epitopegen.analyze_antigen.ProteinNameStandardizer.standardize" title="Permalink to this definition"></a></dt>
+<dd><p>Standardize a protein name.</p>
 </dd></dl>
 
 </dd></dl>
