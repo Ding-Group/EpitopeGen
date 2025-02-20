@@ -80,7 +80,7 @@ results = annotator.annotate(
 
 ## Resources
 
-- [Detailed Tutorial](https://github.com/Regaler/EpitopeGen/blob/main/tutorials/epitopegen_basic_usage.ipynb)
+- [Detailed Tutorial](https://github.com/Ding-Group/EpitopeGen/blob/main/tutorials/epitopegen_basic_usage.ipynb)
 - [API Reference](https://regaler.github.io/EpitopeGen/index.html)
 - [Model Checkpoints](https://zenodo.org/records/14853949)
 - [Reference Databases](https://zenodo.org/records/14861398)
@@ -97,9 +97,9 @@ results = annotator.annotate(
 
 If you use EpitopeGen in your research, please cite:
 ```bibtex
-@article{epitopegen2024,
-  title={Generating cognate epitope sequences of T-cell receptors with a generative transformer},
-  year={2024}
+@article{epitopegen2025,
+  title={Repertoire-level generation of T-cell epitopes with a large-scale generative transformer},
+  year={2025}
 }
 ```
 
@@ -110,5 +110,5 @@ MIT License
 ## Support
 
 For questions and issues:
-- Open an issue on [GitHub](https://github.com/regaler/epitopegen/issues)
+- Open an issue on [GitHub](https://github.com/Ding-Group/EpitopeGen/issues)
 - Contact: minukma@cs.ubc.ca
