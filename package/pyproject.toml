@@ -14,7 +14,12 @@ dependencies = [
     "torch>=1.10.0",
     "transformers>=4.0.0",
     "pandas>=1.0.0",
-    "numpy>=1.19.0"
+    "numpy>=1.19.0",
+    "Levenshtein==0.25.1",
+    "matplotlib==3.7.3",
+    "seaborn==0.13.2",
+    "scanpy==1.10.3",
+    "biopython==1.83"
 ]
 
 [tool.setuptools.package-data]
