@@ -2,6 +2,8 @@
 
 EpitopeGen is a deep learning model that predicts cognate epitope sequences from T-cell receptor (TCR) sequences. It helps functionally annotate TCRs in single-cell TCR sequencing data by generating potential binding epitopes and identifying phenotype associations.
 
+**[Try EpitopeGen online!](https://www.minukma.com/epitopegen)** Experience our TCR-to-epitope prediction server for your research needs. 
+
 <img src="./overview.PNG" alt="EpitopeGen" style="zoom:150%;" />
 
 ## Installation
